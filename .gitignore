@@ -10,3 +10,4 @@ coverage.json
 frontend/node_modules/
 frontend/dist/
 *.ptau
+deployment.json
