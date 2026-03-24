@@ -900,4 +900,52 @@ describe("Mixer", function () {
       ).to.equal(0n);
     });
   });
+
+  // -------------------------------------------------------------------------
+  // 6. Root History
+  // -------------------------------------------------------------------------
+
+  describe("Root History", function () {
+    it("getRootHistory returns array of length ROOT_HISTORY_SIZE (30)", async function () {
+      const { mixer } = await loadFixture(deployMixerFixture);
+      const history = await mixer.getRootHistory();
+      expect(history.length).to.equal(30);
+    });
+
+    it("getRootHistory first slot is the initial non-zero root", async function () {
+      const { mixer } = await loadFixture(deployMixerFixture);
+      const history = await mixer.getRootHistory();
+      const lastRoot = await mixer.getLastRoot();
+      expect(history[0]).to.equal(lastRoot);
+    });
+
+    it("getValidRootCount is 1 before any deposit (only initial root)", async function () {
+      const { mixer } = await loadFixture(deployMixerFixture);
+      expect(await mixer.getValidRootCount()).to.equal(1);
+    });
+
+    it("after 1 deposit, getRootHistory contains at least 2 non-zero entries", async function () {
+      const { mixer, depositor } = await loadFixture(deployMixerFixture);
+      await doDeposit(mixer, depositor);
+      const history = await mixer.getRootHistory();
+      const nonZero = history.filter((r) => r !== 0n);
+      expect(nonZero.length).to.be.at.least(2);
+    });
+
+    it("getValidRootCount increases after each deposit", async function () {
+      const { mixer, depositor } = await loadFixture(deployMixerFixture);
+      const countBefore = await mixer.getValidRootCount();
+      await doDeposit(mixer, depositor);
+      const countAfter = await mixer.getValidRootCount();
+      expect(countAfter).to.be.greaterThan(countBefore);
+    });
+
+    it("most recent root in getRootHistory matches getLastRoot after deposit", async function () {
+      const { mixer, depositor } = await loadFixture(deployMixerFixture);
+      await doDeposit(mixer, depositor);
+      const lastRoot = await mixer.getLastRoot();
+      const history = await mixer.getRootHistory();
+      expect(history.some((r) => r === lastRoot)).to.be.true;
+    });
+  });
 });
