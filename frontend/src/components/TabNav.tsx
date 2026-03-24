@@ -6,6 +6,7 @@ import { StatusCard } from "./StatusCard";
 export function TabNav() {
   return (
     <Tabs defaultValue="deposit" className="w-full">
+      <div className="overflow-x-auto">
       <TabsList className="w-full mb-6">
         <TabsTrigger value="deposit" className="flex-1">
           Deposit
@@ -17,6 +18,7 @@ export function TabNav() {
           Status
         </TabsTrigger>
       </TabsList>
+      </div>
 
       <TabsContent value="deposit">
         <DepositCard />

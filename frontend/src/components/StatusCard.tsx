@@ -1,4 +1,4 @@
-import { useReadContract, useBalance } from "wagmi";
+import { useReadContract, useBalance, useAccount } from "wagmi";
 import { formatEther } from "viem";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,8 @@ function truncateBigInt(value: bigint): string {
 }
 
 export function StatusCard() {
+  const { isConnected } = useAccount();
+
   const { data: nextIndex } = useReadContract({
     address: getMixerAddress(),
     abi: MIXER_ABI,
@@ -26,8 +28,18 @@ export function StatusCard() {
     address: getMixerAddress(),
   });
 
+  if (!isConnected) {
+    return (
+      <Card className="max-w-lg mx-auto">
+        <CardContent className="flex items-center justify-center py-12">
+          <p className="text-sm text-zinc-400">Connect your wallet to continue</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <Card>
+    <Card className="max-w-lg mx-auto">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           Pool Status

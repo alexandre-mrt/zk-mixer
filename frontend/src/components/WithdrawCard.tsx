@@ -184,8 +184,18 @@ export function WithdrawCard() {
     "submitting",
   ];
 
+  if (!isConnected) {
+    return (
+      <Card className="max-w-lg mx-auto">
+        <CardContent className="flex items-center justify-center py-12">
+          <p className="text-sm text-zinc-400">Connect your wallet to continue</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <Card>
+    <Card className="max-w-lg mx-auto">
       <CardHeader>
         <CardTitle>Withdraw</CardTitle>
         <CardDescription>
@@ -273,14 +283,14 @@ export function WithdrawCard() {
 
       <CardFooter>
         {step === "success" ? (
-          <Button variant="secondary" onClick={handleReset} className="w-full">
+          <Button variant="secondary" onClick={handleReset} className="w-full text-sm sm:text-base">
             Make Another Withdrawal
           </Button>
         ) : (
           <Button
             onClick={handleWithdraw}
             disabled={isProcessing || !isConnected}
-            className="w-full"
+            className="w-full text-sm sm:text-base"
           >
             {isProcessing
               ? STEP_LABELS[step] || "Processing..."
