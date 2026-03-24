@@ -2,7 +2,7 @@ import { useReadContract, useBalance } from "wagmi";
 import { formatEther } from "viem";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MIXER_ABI, MIXER_ADDRESS } from "@/lib/constants";
+import { MIXER_ABI, getMixerAddress } from "@/lib/constants";
 
 function truncateBigInt(value: bigint): string {
   const hex = value.toString(16);
@@ -11,19 +11,19 @@ function truncateBigInt(value: bigint): string {
 
 export function StatusCard() {
   const { data: nextIndex } = useReadContract({
-    address: MIXER_ADDRESS,
+    address: getMixerAddress(),
     abi: MIXER_ABI,
     functionName: "nextIndex",
   });
 
   const { data: lastRoot } = useReadContract({
-    address: MIXER_ADDRESS,
+    address: getMixerAddress(),
     abi: MIXER_ABI,
     functionName: "getLastRoot",
   });
 
   const { data: balanceData } = useBalance({
-    address: MIXER_ADDRESS,
+    address: getMixerAddress(),
   });
 
   return (
