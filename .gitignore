@@ -12,3 +12,5 @@ frontend/dist/
 *.ptau
 deployment.json
 notes/
+.claude/
+package-lock.json
