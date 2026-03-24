@@ -1,0 +1,67 @@
+export const MIXER_ABI = [
+  {
+    type: "function",
+    name: "deposit",
+    inputs: [{ name: "_commitment", type: "uint256" }],
+    outputs: [],
+    stateMutability: "payable",
+  },
+  {
+    type: "function",
+    name: "withdraw",
+    inputs: [
+      { name: "_pA", type: "uint256[2]" },
+      { name: "_pB", type: "uint256[2][2]" },
+      { name: "_pC", type: "uint256[2]" },
+      { name: "_root", type: "uint256" },
+      { name: "_nullifierHash", type: "uint256" },
+      { name: "_recipient", type: "address" },
+      { name: "_relayer", type: "address" },
+      { name: "_fee", type: "uint256" },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "getLastRoot",
+    inputs: [],
+    outputs: [{ type: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "nextIndex",
+    inputs: [],
+    outputs: [{ type: "uint32" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "denomination",
+    inputs: [],
+    outputs: [{ type: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "event",
+    name: "Deposit",
+    inputs: [
+      { name: "commitment", type: "uint256", indexed: true },
+      { name: "leafIndex", type: "uint32", indexed: false },
+      { name: "timestamp", type: "uint256", indexed: false },
+    ],
+  },
+] as const;
+
+// Placeholder — update after deployment
+export const MIXER_ADDRESS =
+  "0x0000000000000000000000000000000000000000" as `0x${string}`; // NIGHT-SHIFT-REVIEW: replace with actual deployed address
+
+export const DENOMINATION = BigInt("100000000000000000"); // 0.1 ETH
+
+export const MERKLE_TREE_DEPTH = 20;
+
+export const ZERO_VALUE = BigInt(
+  "21663839004416932945382355908790599225266501822907911457504978515578255421292",
+);
