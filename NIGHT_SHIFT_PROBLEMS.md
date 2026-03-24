@@ -3,7 +3,7 @@
 > Items that need your attention. Run `grep -r "NIGHT-SHIFT-REVIEW" .` to find marked code.
 
 ## Summary
-- 2 uncertainties
+- 3 uncertainties
 - 0 tasks blocked
 - 0 fixes failed
 - 2 assumptions made
@@ -45,6 +45,14 @@
   ```
   Then change `Mixer.deploy(verifierAddress, DENOMINATION, MERKLE_TREE_HEIGHT)` to
   `Mixer.deploy(verifierAddress, DENOMINATION, MERKLE_TREE_HEIGHT, hasherAddress)`
+
+### DEPENDENCY: ethers v6 was missing from direct dependencies
+- **Iteration**: 3
+- **File**: package.json
+- **What I needed**: ethers ^6.14.0 installed at the project root (required by @nomicfoundation/hardhat-ethers@3.x)
+- **What I did**: The project declared no direct `ethers` dependency; bun resolved it as ethers@5.8.0 (from circomlibjs transitive). Running `npm install ethers@^6.14.0 --save --legacy-peer-deps` and then `bun install` fixed it. ethers@6.16.0 is now at node_modules/ethers. Added "ethers": "^6.14.0" to package.json.
+- **Confidence**: HIGH (all 41 tests pass after fix)
+- **User action needed**: None — the fix is applied. If bun.lock or node_modules is ever reset without the updated package.json, run `bun install` again to restore ethers v6.
 
 ### UNCERTAINTY: Verifier.sol placeholder always returns true
 - **Iteration**: 2
