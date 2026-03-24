@@ -61,6 +61,7 @@ contract Mixer is MerkleTree {
         require(msg.value == denomination, "Mixer: incorrect deposit amount");
         require(!commitments[_commitment], "Mixer: duplicate commitment");
         require(_commitment != 0, "Mixer: commitment is zero");
+        require(_commitment < FIELD_SIZE, "Mixer: commitment >= field size");
 
         uint32 insertedIndex = _insert(_commitment);
         commitments[_commitment] = true;
