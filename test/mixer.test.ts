@@ -610,7 +610,66 @@ describe("Mixer", function () {
   });
 
   // -------------------------------------------------------------------------
-  // 5. Integration
+  // 5. View / Getter functions
+  // -------------------------------------------------------------------------
+
+  describe("View functions", function () {
+    it("isSpent returns false before withdrawal", async function () {
+      const { mixer } = await loadFixture(deployMixerFixture);
+      const nullifierHash = randomCommitment();
+      expect(await mixer.isSpent(nullifierHash)).to.be.false;
+    });
+
+    it("isSpent returns true after withdrawal", async function () {
+      const { mixer, depositor, recipient, relayer } =
+        await loadFixture(deployMixerFixture);
+      const { root, nullifierHash } = await (async () => {
+        await doDeposit(mixer, depositor);
+        const root = await mixer.getLastRoot();
+        const nullifierHash = randomCommitment();
+        return { root, nullifierHash };
+      })();
+      const recipientAddr = await recipient.getAddress();
+      const relayerAddr = await relayer.getAddress();
+      await doWithdraw(mixer, root, nullifierHash, recipientAddr, relayerAddr, 0n);
+      expect(await mixer.isSpent(nullifierHash)).to.be.true;
+    });
+
+    it("isCommitted returns false before deposit", async function () {
+      const { mixer } = await loadFixture(deployMixerFixture);
+      const commitment = randomCommitment();
+      expect(await mixer.isCommitted(commitment)).to.be.false;
+    });
+
+    it("isCommitted returns true after deposit", async function () {
+      const { mixer, depositor } = await loadFixture(deployMixerFixture);
+      const { commitment } = await doDeposit(mixer, depositor);
+      expect(await mixer.isCommitted(commitment)).to.be.true;
+    });
+
+    it("getDepositCount returns 0 before any deposit", async function () {
+      const { mixer } = await loadFixture(deployMixerFixture);
+      expect(await mixer.getDepositCount()).to.equal(0);
+    });
+
+    it("getDepositCount increments with each deposit", async function () {
+      const { mixer, depositor } = await loadFixture(deployMixerFixture);
+      await doDeposit(mixer, depositor);
+      expect(await mixer.getDepositCount()).to.equal(1);
+      await doDeposit(mixer, depositor);
+      expect(await mixer.getDepositCount()).to.equal(2);
+    });
+
+    it("getDepositCount matches nextIndex", async function () {
+      const { mixer, depositor } = await loadFixture(deployMixerFixture);
+      await doDeposit(mixer, depositor);
+      await doDeposit(mixer, depositor);
+      expect(await mixer.getDepositCount()).to.equal(await mixer.nextIndex());
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // 6. Integration
   // -------------------------------------------------------------------------
 
   describe("Integration", function () {
