@@ -1,0 +1,12 @@
+node_modules/
+dist/
+cache/
+artifacts/
+build/circuits/
+typechain-types/
+.env
+coverage/
+coverage.json
+frontend/node_modules/
+frontend/dist/
+*.ptau
