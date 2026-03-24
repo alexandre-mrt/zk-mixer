@@ -11,7 +11,8 @@
     "deploy:sepolia": "hardhat run scripts/deploy.ts --network sepolia",
     "cli": "bun run cli/index.ts",
     "circuit:compile": "bash scripts/compile-circuit.sh",
-    "circuit:verifier": "bash scripts/generate-verifier.sh"
+    "circuit:verifier": "bash scripts/generate-verifier.sh",
+    "verify:sepolia": "hardhat run scripts/verify.ts --network sepolia"
   },
   "dependencies": {
     "@nomicfoundation/hardhat-toolbox": "^6.1.2",
