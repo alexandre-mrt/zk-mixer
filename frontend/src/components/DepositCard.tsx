@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { generateNote, type Note } from "@/lib/crypto";
-import { MIXER_ABI, MIXER_ADDRESS, DENOMINATION } from "@/lib/constants";
+import { MIXER_ABI, getMixerAddress, DENOMINATION } from "@/lib/constants";
 
 type DepositState = "idle" | "generating" | "confirming" | "success" | "error";
 
@@ -45,7 +45,7 @@ export function DepositCard() {
       setState("confirming");
 
       const hash = await writeContractAsync({
-        address: MIXER_ADDRESS,
+        address: getMixerAddress(),
         abi: MIXER_ABI,
         functionName: "deposit",
         args: [generatedNote.commitment],

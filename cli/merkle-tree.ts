@@ -13,9 +13,9 @@ export interface MerkleProof {
 
 export class MerkleTree {
   readonly levels: number;
-  readonly capacity: number;
   readonly leaves: bigint[];
   private readonly zeros: bigint[];
+  private layers: bigint[][];
   private readonly poseidon: PoseidonFn;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private readonly F: FieldObj;
@@ -26,6 +26,7 @@ export class MerkleTree {
     this.poseidon = poseidon as PoseidonFn;
     this.F = F as FieldObj;
     this.leaves = [];
+    this.layers = [];
 
     // Compute zero values bottom-up: zeros[0] = 0, zeros[i] = Poseidon(zeros[i-1], zeros[i-1])
     const zeros: bigint[] = [0n];
@@ -33,8 +34,6 @@ export class MerkleTree {
       zeros.push(this.hash(zeros[i - 1], zeros[i - 1]));
     }
     this.zeros = zeros;
-
-    this.capacity = 2 ** levels;
   }
 
   hash(left: bigint, right: bigint): bigint {
@@ -42,38 +41,29 @@ export class MerkleTree {
   }
 
   insert(leaf: bigint): number {
-    if (this.leaves.length >= this.capacity) {
-      throw new Error("MerkleTree: tree is full");
-    }
     const index = this.leaves.length;
     this.leaves.push(leaf);
+    this.rebuildLayers();
     return index;
   }
 
-  getRoot(): bigint {
-    return this.computeRoot();
+  private rebuildLayers(): void {
+    this.layers = [this.leaves.slice()];
+    for (let level = 0; level < this.levels; level++) {
+      const currentLevel = this.layers[level];
+      const nextLevel: bigint[] = [];
+      for (let i = 0; i < Math.max(currentLevel.length, 1); i += 2) {
+        const left = currentLevel[i] ?? this.zeros[level];
+        const right = currentLevel[i + 1] ?? this.zeros[level];
+        nextLevel.push(this.hash(left, right));
+      }
+      this.layers.push(nextLevel);
+    }
   }
 
-  private computeRoot(): bigint {
-    if (this.leaves.length === 0) {
-      return this.zeros[this.levels];
-    }
-
-    let currentLevel = [...this.leaves];
-
-    for (let level = 0; level < this.levels; level++) {
-      const levelSize = 2 ** (this.levels - level);
-      // Pad with zero values for this level
-      while (currentLevel.length < levelSize) {
-        currentLevel.push(this.zeros[level]);
-      }
-      const nextLevel: bigint[] = [];
-      for (let i = 0; i < currentLevel.length; i += 2) {
-        nextLevel.push(this.hash(currentLevel[i], currentLevel[i + 1]));
-      }
-      currentLevel = nextLevel;
-    }
-    return currentLevel[0] ?? this.zeros[this.levels];
+  getRoot(): bigint {
+    if (this.layers.length === 0) return this.zeros[this.levels];
+    return this.layers[this.levels]?.[0] ?? this.zeros[this.levels];
   }
 
   getProof(leafIndex: number): MerkleProof {
@@ -83,29 +73,17 @@ export class MerkleTree {
       );
     }
 
+    if (this.layers.length === 0) this.rebuildLayers();
+
     const pathElements: bigint[] = [];
     const pathIndices: number[] = [];
-
-    let currentLevel = [...this.leaves];
     let index = leafIndex;
 
     for (let level = 0; level < this.levels; level++) {
-      const levelSize = 2 ** (this.levels - level);
-      // Pad with zero values for this level
-      while (currentLevel.length < levelSize) {
-        currentLevel.push(this.zeros[level]);
-      }
-
       const siblingIndex = index % 2 === 0 ? index + 1 : index - 1;
-      pathElements.push(currentLevel[siblingIndex]);
+      const sibling = this.layers[level]?.[siblingIndex] ?? this.zeros[level];
+      pathElements.push(sibling);
       pathIndices.push(index % 2);
-
-      // Compute parent level
-      const nextLevel: bigint[] = [];
-      for (let i = 0; i < currentLevel.length; i += 2) {
-        nextLevel.push(this.hash(currentLevel[i], currentLevel[i + 1]));
-      }
-      currentLevel = nextLevel;
       index = Math.floor(index / 2);
     }
 

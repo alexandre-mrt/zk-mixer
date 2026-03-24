@@ -54,10 +54,10 @@ export function WithdrawCard() {
     useWaitForTransactionReceipt({ hash: txHash });
 
   const { data: depositEvents } = useContractEvents({
-    address: MIXER_ADDRESS,
+    address: getMixerAddress(),
     abi: MIXER_ABI,
     eventName: "Deposit",
-    fromBlock: BigInt(0),
+    fromBlock: DEPLOY_BLOCK,
   });
 
   const handleWithdraw = async () => {
@@ -142,7 +142,7 @@ export function WithdrawCard() {
       setStep("submitting");
 
       const hash = await writeContractAsync({
-        address: MIXER_ADDRESS,
+        address: getMixerAddress(),
         abi: MIXER_ABI,
         functionName: "withdraw",
         args: [
