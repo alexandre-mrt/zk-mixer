@@ -3,7 +3,7 @@
 > Items that need your attention. Run `grep -r "NIGHT-SHIFT-REVIEW" .` to find marked code.
 
 ## Summary
-- 2 uncertainties
+- 4 uncertainties
 - 0 tasks blocked
 - 0 fixes failed
 - 2 assumptions made
@@ -45,6 +45,31 @@
   ```
   Then change `Mixer.deploy(verifierAddress, DENOMINATION, MERKLE_TREE_HEIGHT)` to
   `Mixer.deploy(verifierAddress, DENOMINATION, MERKLE_TREE_HEIGHT, hasherAddress)`
+
+### UNCERTAINTY: Node.js module polyfills needed for circomlibjs/snarkjs in browser
+- **Iteration**: 3
+- **File**: frontend/vite.config.ts
+- **What I needed**: Browser polyfills for `assert`, `buffer`, `events` used by circomlibjs and snarkjs
+- **What I did**: Build succeeded but vite emits warnings about externalized Node.js modules. Proof generation with snarkjs.groth16.fullProve may fail at runtime in the browser without polyfills.
+- **Confidence**: MEDIUM
+- **User action needed**: If proof generation fails with "assert is not defined" or similar, add polyfills to vite.config.ts:
+  ```
+  bun add -D vite-plugin-node-polyfills
+  ```
+  Then in vite.config.ts:
+  ```typescript
+  import { nodePolyfills } from 'vite-plugin-node-polyfills';
+  plugins: [react(), tailwindcss(), nodePolyfills()]
+  ```
+  Alternatively use snarkjs browser bundle: import from 'snarkjs/build/browser.esm.js' instead of 'snarkjs'.
+
+### UNCERTAINTY: MIXER_ADDRESS is zero address placeholder
+- **Iteration**: 3
+- **File**: frontend/src/lib/constants.ts:27
+- **What I needed**: Deployed contract address
+- **What I did**: Used zero address as placeholder. All contract reads/writes will fail until updated.
+- **Confidence**: HIGH
+- **User action needed**: After deploying (bunx hardhat run scripts/deploy.ts --network localhost), update MIXER_ADDRESS in frontend/src/lib/constants.ts with the deployed address.
 
 ### UNCERTAINTY: Verifier.sol placeholder always returns true
 - **Iteration**: 2
