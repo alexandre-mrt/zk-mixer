@@ -57,6 +57,15 @@ contract Mixer is MerkleTree, ReentrancyGuard, Pausable, Ownable {
     /// @notice Tracks known commitments to prevent duplicate deposits.
     mapping(uint256 => bool) public commitments;
 
+    /// @notice Cumulative amount deposited across all deposits (in wei).
+    uint256 public totalDeposited;
+
+    /// @notice Cumulative amount withdrawn across all withdrawals (in wei).
+    uint256 public totalWithdrawn;
+
+    /// @notice Total number of withdrawals completed.
+    uint256 public withdrawalCount;
+
     /// @notice Emitted when a commitment is successfully inserted into the tree.
     /// @param commitment  Poseidon(secret, nullifier) provided by the depositor.
     /// @param leafIndex   Position of the commitment in the Merkle tree.
@@ -104,6 +113,7 @@ contract Mixer is MerkleTree, ReentrancyGuard, Pausable, Ownable {
 
         uint32 insertedIndex = _insert(_commitment);
         commitments[_commitment] = true;
+        totalDeposited += denomination;
 
         emit Deposit(_commitment, insertedIndex, block.timestamp);
     }
@@ -151,6 +161,8 @@ contract Mixer is MerkleTree, ReentrancyGuard, Pausable, Ownable {
 
         // Mark nullifier spent BEFORE transferring ETH (checks-effects-interactions)
         nullifierHashes[_nullifierHash] = true;
+        totalWithdrawn += denomination;
+        withdrawalCount++;
 
         uint256 withdrawAmount = denomination - _fee;
 
@@ -179,6 +191,22 @@ contract Mixer is MerkleTree, ReentrancyGuard, Pausable, Ownable {
     /// @notice Get the current deposit count
     function getDepositCount() external view returns (uint32) {
         return nextIndex;
+    }
+
+    /// @notice Return cumulative pool statistics in a single call.
+    /// @return _totalDeposited  Sum of all deposited amounts (wei).
+    /// @return _totalWithdrawn  Sum of all withdrawn amounts (wei).
+    /// @return _depositCount    Number of deposits made (== nextIndex).
+    /// @return _withdrawalCount Number of completed withdrawals.
+    /// @return _poolBalance     Current ETH balance of the contract (wei).
+    function getStats() external view returns (
+        uint256 _totalDeposited,
+        uint256 _totalWithdrawn,
+        uint256 _depositCount,
+        uint256 _withdrawalCount,
+        uint256 _poolBalance
+    ) {
+        return (totalDeposited, totalWithdrawn, nextIndex, withdrawalCount, address(this).balance);
     }
 
     /// @notice Pause all deposits and withdrawals.

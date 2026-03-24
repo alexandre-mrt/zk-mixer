@@ -28,6 +28,15 @@ export function StatusCard() {
     address: getMixerAddress(),
   });
 
+  const { data: stats } = useReadContract({
+    address: getMixerAddress(),
+    abi: MIXER_ABI,
+    functionName: "getStats",
+  });
+
+  const totalDeposited = stats?.[0];
+  const totalWithdrawn = stats?.[1];
+
   if (!isConnected) {
     return (
       <Card className="max-w-lg mx-auto">
@@ -70,6 +79,24 @@ export function StatusCard() {
             <span className="text-sm text-zinc-400">Current Merkle Root</span>
             <span className="font-mono text-xs text-zinc-300">
               {lastRoot !== undefined ? truncateBigInt(lastRoot) : "—"}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg bg-zinc-800 px-4 py-3">
+            <span className="text-sm text-zinc-400">Total Deposited (cumul.)</span>
+            <span className="font-mono font-semibold text-emerald-400">
+              {totalDeposited !== undefined
+                ? `${parseFloat(formatEther(totalDeposited)).toFixed(4)} ETH`
+                : "—"}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg bg-zinc-800 px-4 py-3">
+            <span className="text-sm text-zinc-400">Total Withdrawn (cumul.)</span>
+            <span className="font-mono font-semibold text-rose-400">
+              {totalWithdrawn !== undefined
+                ? `${parseFloat(formatEther(totalWithdrawn)).toFixed(4)} ETH`
+                : "—"}
             </span>
           </div>
 
