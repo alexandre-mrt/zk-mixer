@@ -3,10 +3,10 @@
 > Items that need your attention. Run `grep -r "NIGHT-SHIFT-REVIEW" .` to find marked code.
 
 ## Summary
-- 1 uncertainty
+- 2 uncertainties
 - 0 tasks blocked
 - 0 fixes failed
-- 1 assumption made
+- 2 assumptions made
 
 ## Problems
 
@@ -24,3 +24,32 @@
 - **What I did**: Used "Groth16Verifier" — the name snarkjs 0.7.x generates. Marked with NIGHT-SHIFT-REVIEW comment.
 - **Confidence**: MEDIUM
 - **User action needed**: After running `bash scripts/generate-verifier.sh` and `bunx hardhat compile`, verify the contract name matches. Run: `ls artifacts/contracts/Verifier.sol/` — the JSON filename (minus .json) is the correct name. Update deploy script if different.
+
+### ASSUMPTION: deploy.ts missing hasher deployment
+- **Iteration**: 2
+- **File**: scripts/deploy.ts:33
+- **What I needed**: Alignment between deploy script and Mixer constructor signature
+- **What I did**: MerkleTree and Mixer constructors take `_hasher` address (as per task spec). The existing deploy.ts calls `Mixer.deploy(verifierAddress, DENOMINATION, MERKLE_TREE_HEIGHT)` with only 3 args — missing the hasher address. Did not modify deploy.ts (out of scope). Logged here.
+- **Confidence**: HIGH (mismatch is confirmed — compile succeeds but deploy will revert)
+- **User action needed**: Update scripts/deploy.ts to deploy the Poseidon hasher first. Add before the Mixer deploy:
+  ```typescript
+  import { poseidonContract } from "circomlibjs";
+  const HasherFactory = new ethers.ContractFactory(
+    poseidonContract.generateABI(2),
+    poseidonContract.createCode(2),
+    deployer
+  );
+  const hasherContract = await HasherFactory.deploy();
+  await hasherContract.waitForDeployment();
+  const hasherAddress = await hasherContract.getAddress();
+  ```
+  Then change `Mixer.deploy(verifierAddress, DENOMINATION, MERKLE_TREE_HEIGHT)` to
+  `Mixer.deploy(verifierAddress, DENOMINATION, MERKLE_TREE_HEIGHT, hasherAddress)`
+
+### UNCERTAINTY: Verifier.sol placeholder always returns true
+- **Iteration**: 2
+- **File**: contracts/Verifier.sol
+- **What I needed**: Real snarkjs-generated verifier
+- **What I did**: Wrote a placeholder Groth16Verifier that returns true for all proofs. Marked with NIGHT-SHIFT-REVIEW. Required for compilation until circuits are compiled and snarkjs verifier is generated.
+- **Confidence**: HIGH (placeholder is correct for dev; production needs the real verifier)
+- **User action needed**: After running `bash scripts/compile-circuit.sh` and `bash scripts/generate-verifier.sh`, delete contracts/Verifier.sol and use the snarkjs-generated one. The generated contract name should be Groth16Verifier.
