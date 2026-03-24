@@ -669,7 +669,105 @@ describe("Mixer", function () {
   });
 
   // -------------------------------------------------------------------------
-  // 6. Integration
+  // 6. Cumulative Stats
+  // -------------------------------------------------------------------------
+
+  describe("Cumulative Stats", function () {
+    it("totalDeposited starts at 0", async function () {
+      const { mixer } = await loadFixture(deployMixerFixture);
+      expect(await mixer.totalDeposited()).to.equal(0n);
+    });
+
+    it("totalWithdrawn starts at 0", async function () {
+      const { mixer } = await loadFixture(deployMixerFixture);
+      expect(await mixer.totalWithdrawn()).to.equal(0n);
+    });
+
+    it("withdrawalCount starts at 0", async function () {
+      const { mixer } = await loadFixture(deployMixerFixture);
+      expect(await mixer.withdrawalCount()).to.equal(0n);
+    });
+
+    it("totalDeposited increases by denomination per deposit", async function () {
+      const { mixer, depositor } = await loadFixture(deployMixerFixture);
+      await doDeposit(mixer, depositor);
+      expect(await mixer.totalDeposited()).to.equal(DENOMINATION);
+      await doDeposit(mixer, depositor);
+      expect(await mixer.totalDeposited()).to.equal(DENOMINATION * 2n);
+    });
+
+    it("totalWithdrawn increases by denomination per withdrawal", async function () {
+      const { mixer, depositor, recipient, relayer } =
+        await loadFixture(deployMixerFixture);
+      const recipientAddr = await recipient.getAddress();
+      const relayerAddr = await relayer.getAddress();
+
+      await doDeposit(mixer, depositor);
+      const root = await mixer.getLastRoot();
+      const nullifierHash = randomCommitment();
+      const [owner] = await ethers.getSigners();
+      await doWithdraw(mixer, root, nullifierHash, recipientAddr, relayerAddr, 0n, owner);
+
+      expect(await mixer.totalWithdrawn()).to.equal(DENOMINATION);
+    });
+
+    it("withdrawalCount increments with each withdrawal", async function () {
+      const { mixer, depositor, recipient, relayer } =
+        await loadFixture(deployMixerFixture);
+      const recipientAddr = await recipient.getAddress();
+      const relayerAddr = await relayer.getAddress();
+      const [owner] = await ethers.getSigners();
+
+      // First withdrawal
+      await doDeposit(mixer, depositor);
+      const root1 = await mixer.getLastRoot();
+      const nullifier1 = randomCommitment();
+      await doWithdraw(mixer, root1, nullifier1, recipientAddr, relayerAddr, 0n, owner);
+      expect(await mixer.withdrawalCount()).to.equal(1n);
+
+      // Second withdrawal
+      await doDeposit(mixer, depositor);
+      const root2 = await mixer.getLastRoot();
+      const nullifier2 = randomCommitment();
+      await doWithdraw(mixer, root2, nullifier2, recipientAddr, relayerAddr, 0n, owner);
+      expect(await mixer.withdrawalCount()).to.equal(2n);
+    });
+
+    it("getStats returns correct values after deposit + withdraw cycle", async function () {
+      const { mixer, depositor, recipient, relayer } =
+        await loadFixture(deployMixerFixture);
+      const recipientAddr = await recipient.getAddress();
+      const relayerAddr = await relayer.getAddress();
+      const mixerAddr = await mixer.getAddress();
+      const [owner] = await ethers.getSigners();
+
+      // Deposit twice
+      await doDeposit(mixer, depositor);
+      await doDeposit(mixer, depositor);
+
+      // Withdraw once
+      const root = await mixer.getLastRoot();
+      const nullifierHash = randomCommitment();
+      await doWithdraw(mixer, root, nullifierHash, recipientAddr, relayerAddr, 0n, owner);
+
+      const [
+        _totalDeposited,
+        _totalWithdrawn,
+        _depositCount,
+        _withdrawalCount,
+        _poolBalance,
+      ] = await mixer.getStats();
+
+      expect(_totalDeposited).to.equal(DENOMINATION * 2n);
+      expect(_totalWithdrawn).to.equal(DENOMINATION);
+      expect(_depositCount).to.equal(2n);
+      expect(_withdrawalCount).to.equal(1n);
+      expect(_poolBalance).to.equal(await ethers.provider.getBalance(mixerAddr));
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // 7. Integration
   // -------------------------------------------------------------------------
 
   describe("Integration", function () {

@@ -44,6 +44,19 @@ export const MIXER_ABI = [
     stateMutability: "view",
   },
   {
+    type: "function",
+    name: "getStats",
+    inputs: [],
+    outputs: [
+      { name: "_totalDeposited", type: "uint256" },
+      { name: "_totalWithdrawn", type: "uint256" },
+      { name: "_depositCount", type: "uint256" },
+      { name: "_withdrawalCount", type: "uint256" },
+      { name: "_poolBalance", type: "uint256" },
+    ],
+    stateMutability: "view",
+  },
+  {
     type: "event",
     name: "Deposit",
     inputs: [
