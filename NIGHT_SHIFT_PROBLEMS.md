@@ -3,10 +3,10 @@
 > Items that need your attention. Run `grep -r "NIGHT-SHIFT-REVIEW" .` to find marked code.
 
 ## Summary
-- 2 uncertainties
+- 3 uncertainties
 - 0 tasks blocked
 - 0 fixes failed
-- 2 assumptions made
+- 3 assumptions made
 
 ## Problems
 
@@ -45,6 +45,14 @@
   ```
   Then change `Mixer.deploy(verifierAddress, DENOMINATION, MERKLE_TREE_HEIGHT)` to
   `Mixer.deploy(verifierAddress, DENOMINATION, MERKLE_TREE_HEIGHT, hasherAddress)`
+
+### UNCERTAINTY: ethers version mismatch between root package and hardhat-toolbox
+- **Iteration**: 3
+- **File**: cli/utils.ts:1
+- **What I needed**: ethers v6 (as specified in task)
+- **What I did**: The project root `node_modules/ethers` is v5.8.0 (a transitive dependency), but TypeScript resolves to ethers v6 via `@nomicfoundation/hardhat-ethers` types. The CLI files import `ethers` directly and use v6 API (`JsonRpcProvider`, `Wallet`, `Contract` from `"ethers"` top-level). This compiles cleanly under the current tsconfig. At runtime (bun run cli/index.ts), the ethers resolution may pick up v5 from the root node_modules if `bun install` hasn't been run in the worktree — the worktree has no local node_modules, so it will resolve from the parent project's node_modules where v5 lives.
+- **Confidence**: MEDIUM
+- **User action needed**: Before running the CLI: `cd` to the worktree root and run `bun install`. If runtime errors about missing v6 exports appear, add `"ethers": "^6.14.0"` as a direct dependency in package.json and reinstall.
 
 ### UNCERTAINTY: Verifier.sol placeholder always returns true
 - **Iteration**: 2
