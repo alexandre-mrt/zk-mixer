@@ -1,0 +1,17 @@
+import { Command } from "commander";
+import { depositCommand } from "./deposit";
+import { withdrawCommand } from "./withdraw";
+import { statusCommand } from "./status";
+
+const program = new Command();
+
+program
+  .name("zk-mixer")
+  .description("ZK Payment Mixer CLI — private ETH deposits and withdrawals")
+  .version("0.1.0");
+
+program.addCommand(depositCommand);
+program.addCommand(withdrawCommand);
+program.addCommand(statusCommand);
+
+program.parse();
