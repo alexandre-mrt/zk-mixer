@@ -81,8 +81,18 @@ export function DepositCard() {
   const isLoading =
     state === "generating" || state === "confirming" || isWaiting;
 
+  if (!isConnected) {
+    return (
+      <Card className="max-w-lg mx-auto">
+        <CardContent className="flex items-center justify-center py-12">
+          <p className="text-sm text-zinc-400">Connect your wallet to continue</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <Card>
+    <Card className="max-w-lg mx-auto">
       <CardHeader>
         <CardTitle>Deposit</CardTitle>
         <CardDescription>
@@ -138,14 +148,14 @@ export function DepositCard() {
 
       <CardFooter className="flex gap-2">
         {state === "success" ? (
-          <Button variant="secondary" onClick={handleReset} className="w-full">
+          <Button variant="secondary" onClick={handleReset} className="w-full text-sm sm:text-base">
             Make Another Deposit
           </Button>
         ) : (
           <Button
             onClick={handleDeposit}
             disabled={isLoading || !isConnected}
-            className="w-full"
+            className="w-full text-sm sm:text-base"
           >
             {isLoading ? "Processing..." : "Deposit 0.1 ETH"}
           </Button>
