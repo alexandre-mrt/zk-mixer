@@ -85,13 +85,15 @@ export const withdrawCommand = new Command("withdraw")
         console.log(`Merkle root: ${toHex(merkleRoot)}`);
 
         // 6. Prepare circuit input
-        // recipient is encoded as bigint (uint160 of the address)
+        // recipient and relayer are encoded as bigint (uint160 of the address)
         const recipientBigInt = BigInt(opts.recipient);
+        const relayerBigInt = BigInt(relayer);
 
         const circuitInput = {
           root: merkleRoot.toString(),
           nullifierHash: note.nullifierHash.toString(),
           recipient: recipientBigInt.toString(),
+          relayer: relayerBigInt.toString(),
           fee: fee.toString(),
           secret: note.secret.toString(),
           nullifier: note.nullifier.toString(),

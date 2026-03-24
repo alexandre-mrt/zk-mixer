@@ -16,6 +16,7 @@ template Withdraw(levels) {
     signal input root;
     signal input nullifierHash;
     signal input recipient;  // withdrawal destination address
+    signal input relayer;    // relayer address bound to proof — prevents front-running
     signal input fee;        // relayer fee
 
     // Private inputs
@@ -50,8 +51,10 @@ template Withdraw(levels) {
     // without adding meaningful logic — changing them would invalidate the proof
     signal recipientSquare;
     recipientSquare <== recipient * recipient;
+    signal relayerSquare;
+    relayerSquare <== relayer * relayer;
     signal feeSquare;
     feeSquare <== fee * fee;
 }
 
-component main {public [root, nullifierHash, recipient, fee]} = Withdraw(20);
+component main {public [root, nullifierHash, recipient, relayer, fee]} = Withdraw(20);

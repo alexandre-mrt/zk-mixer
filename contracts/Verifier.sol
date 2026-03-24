@@ -14,7 +14,7 @@ contract Groth16Verifier {
         uint256[2] calldata,
         uint256[2][2] calldata,
         uint256[2] calldata,
-        uint256[4] calldata
+        uint256[5] calldata
     ) external view returns (bool) {
         // NIGHT-SHIFT-REVIEW: placeholder, replace with real verifier
         require(block.chainid == 31337, "Groth16Verifier: placeholder verifier, only works on Hardhat network");

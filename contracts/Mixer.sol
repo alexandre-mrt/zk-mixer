@@ -4,13 +4,13 @@ pragma solidity ^0.8.20;
 import "./MerkleTree.sol";
 
 /// @notice Interface matching the snarkjs Groth16 verifier output.
-/// Public signals order must match the circuit: [root, nullifierHash, recipient, fee]
+/// Public signals order must match the circuit: [root, nullifierHash, recipient, relayer, fee]
 interface IVerifier {
     function verifyProof(
         uint256[2] calldata _pA,
         uint256[2][2] calldata _pB,
         uint256[2] calldata _pC,
-        uint256[4] calldata _pubSignals
+        uint256[5] calldata _pubSignals
     ) external view returns (bool);
 }
 
@@ -94,11 +94,12 @@ contract Mixer is MerkleTree {
         require(!nullifierHashes[_nullifierHash], "Mixer: already spent");
         require(isKnownRoot(_root), "Mixer: unknown root");
 
-        // Public signals order must match circuit: [root, nullifierHash, recipient, fee]
-        uint256[4] memory pubSignals = [
+        // Public signals order must match circuit: [root, nullifierHash, recipient, relayer, fee]
+        uint256[5] memory pubSignals = [
             _root,
             _nullifierHash,
             uint256(uint160(address(_recipient))),
+            uint256(uint160(address(_relayer))),
             _fee
         ];
 
