@@ -161,4 +161,39 @@ contract MerkleTree {
     function getLastRoot() public view returns (uint256) {
         return roots[currentRootIndex];
     }
+
+    /// @notice Returns the maximum number of leaves the tree can hold
+    function getTreeCapacity() external view returns (uint256) {
+        return uint256(2) ** levels;
+    }
+
+    /// @notice Returns the current tree utilization as a percentage (0-100)
+    function getTreeUtilization() external view returns (uint256) {
+        uint256 capacity = uint256(2) ** levels;
+        if (capacity == 0) return 0;
+        return (uint256(nextIndex) * 100) / capacity;
+    }
+
+    /// @notice Returns true if the tree still has space for new deposits
+    function hasCapacity() external view returns (bool) {
+        return nextIndex < uint32(2) ** levels;
+    }
+
+    /// @notice Returns all roots in the history buffer (including zero entries for unused slots)
+    function getRootHistory() external view returns (uint256[] memory) {
+        uint256[] memory history = new uint256[](ROOT_HISTORY_SIZE);
+        for (uint32 i = 0; i < ROOT_HISTORY_SIZE; i++) {
+            history[i] = roots[i];
+        }
+        return history;
+    }
+
+    /// @notice Returns the number of valid (non-zero) roots in history
+    function getValidRootCount() external view returns (uint32) {
+        uint32 count = 0;
+        for (uint32 i = 0; i < ROOT_HISTORY_SIZE; i++) {
+            if (roots[i] != 0) count++;
+        }
+        return count;
+    }
 }
