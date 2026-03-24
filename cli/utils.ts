@@ -99,7 +99,7 @@ export async function parseNote(noteString: string): Promise<Note> {
     !/^[0-9a-f]{64}$/.test(parts[3])
   ) {
     throw new Error(
-      `Invalid note format. Expected: ${NOTE_PREFIX}-<64hexChars>-<64hexChars>`
+      "Invalid note format. Expected: zk-mixer-<secret_hex>-<nullifier_hex>"
     );
   }
 
@@ -241,7 +241,7 @@ export function resolveMixerAddress(
   const addr = optionValue ?? deploymentFallback;
   if (!addr) {
     throw new Error(
-      "Mixer address required. Provide --mixer <address> or run deploy first (creates deployment.json)."
+      "Contract not deployed. Provide --mixer address or deploy first."
     );
   }
   return addr;
@@ -290,3 +290,10 @@ export function saveNote(note: SavedNote): string {
 
 // Re-export formatEther for use in status.ts
 export { formatEther };
+
+export const log = {
+  success: (msg: string) => console.log(`\u2713 ${msg}`),
+  error: (msg: string) => console.error(`\u2717 ${msg}`),
+  info: (msg: string) => console.log(`> ${msg}`),
+  step: (msg: string) => console.log(`  ${msg}`),
+};

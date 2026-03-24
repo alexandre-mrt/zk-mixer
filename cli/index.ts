@@ -8,7 +8,8 @@ const program = new Command();
 program
   .name("zk-mixer")
   .description("ZK Payment Mixer CLI — private ETH deposits and withdrawals")
-  .version("0.1.0");
+  .version("0.1.0")
+  .option("--verbose", "Enable verbose output");
 
 program.addCommand(depositCommand);
 program.addCommand(withdrawCommand);

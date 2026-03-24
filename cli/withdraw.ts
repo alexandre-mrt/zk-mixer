@@ -1,6 +1,7 @@
 import "dotenv/config";
 import path from "path";
 import { Command } from "commander";
+import { ethers } from "ethers";
 import * as snarkjs from "snarkjs";
 import { loadMixerAbi, loadDeploymentAddress, DEFAULT_RPC_URL } from "./config";
 import {
@@ -13,6 +14,7 @@ import {
   resolveMixerAddress,
   resolvePrivateKey,
   toHex,
+  log,
 } from "./utils";
 
 const WASM_PATH = path.resolve("build/circuits/withdraw_js/withdraw.wasm");
@@ -29,6 +31,11 @@ export const withdrawCommand = new Command("withdraw")
   .option("--mixer <address>", "Mixer contract address (or auto-read from deployment.json)")
   .option("--relayer <address>", "Relayer address", ZERO_ADDRESS)
   .option("--fee <wei>", "Relayer fee in wei", "0")
+  .addHelpText("after", `
+Examples:
+  $ zk-mixer withdraw --note zk-mixer-<secret>-<nullifier> --recipient 0x... --key 0x...
+  $ zk-mixer withdraw --note zk-mixer-<secret>-<nullifier> --recipient 0x... (reads mixer address from deployment.json)
+`)
   .action(
     async (opts: {
       note: string;
@@ -40,6 +47,31 @@ export const withdrawCommand = new Command("withdraw")
       fee: string;
     }) => {
       try {
+        // Validate addresses before any heavy operations
+        if (!ethers.isAddress(opts.recipient)) {
+          throw new Error(`Invalid recipient address: "${opts.recipient}"`);
+        }
+        if (opts.mixer !== undefined && !ethers.isAddress(opts.mixer)) {
+          throw new Error(`Invalid mixer address: "${opts.mixer}"`);
+        }
+        if (opts.relayer !== ZERO_ADDRESS && !ethers.isAddress(opts.relayer)) {
+          throw new Error(`Invalid relayer address: "${opts.relayer}"`);
+        }
+
+        // Validate note format before attempting to parse
+        const noteParts = opts.note.trim().split("-");
+        if (
+          noteParts.length !== 4 ||
+          noteParts[0] !== "zk" ||
+          noteParts[1] !== "mixer" ||
+          !/^[0-9a-f]{64}$/.test(noteParts[2]) ||
+          !/^[0-9a-f]{64}$/.test(noteParts[3])
+        ) {
+          throw new Error(
+            "Invalid note format. Expected: zk-mixer-<secret_hex>-<nullifier_hex>"
+          );
+        }
+
         const privateKey = resolvePrivateKey(opts.key);
         const mixerAddress = resolveMixerAddress(opts.mixer, loadDeploymentAddress());
         const mixerAbi = loadMixerAbi();
@@ -47,17 +79,22 @@ export const withdrawCommand = new Command("withdraw")
         const relayer = opts.relayer;
 
         // 1. Parse note
-        console.log("Parsing note...");
+        log.info("Parsing note...");
         const note = await parseNote(opts.note);
-        console.log(`Commitment:    ${toHex(note.commitment)}`);
-        console.log(`NullifierHash: ${toHex(note.nullifierHash)}`);
+        log.step(`Commitment:    ${toHex(note.commitment)}`);
+        log.step(`NullifierHash: ${toHex(note.nullifierHash)}`);
 
         // 2. Check the nullifier has not already been spent
-        const { contract: readContract, provider } = getMixerContractReadOnly(
-          opts.rpc,
-          mixerAddress,
-          mixerAbi
-        );
+        let readContract: ReturnType<typeof getMixerContractReadOnly>["contract"];
+        let provider: ReturnType<typeof getMixerContractReadOnly>["provider"];
+        try {
+          const result = getMixerContractReadOnly(opts.rpc, mixerAddress, mixerAbi);
+          readContract = result.contract;
+          provider = result.provider;
+        } catch (err) {
+          throw new Error(`Failed to connect to RPC at ${opts.rpc}: ${(err as Error).message}`);
+        }
+
         const alreadySpent: boolean = await readContract.nullifierHashes(
           note.nullifierHash.toString()
         );
@@ -66,7 +103,7 @@ export const withdrawCommand = new Command("withdraw")
         }
 
         // 3. Build Merkle tree from on-chain Deposit events
-        console.log("Fetching deposit history and building Merkle tree...");
+        log.info("Fetching deposit history and building Merkle tree...");
         const tree = await buildMerkleTree(provider, mixerAddress, mixerAbi);
 
         // 4. Find leaf index for our commitment
@@ -77,12 +114,12 @@ export const withdrawCommand = new Command("withdraw")
             "Make sure you are connected to the correct network and mixer address."
           );
         }
-        console.log(`Commitment found at leaf index: ${leafIndex}`);
+        log.step(`Commitment found at leaf index: ${leafIndex}`);
 
         // 5. Get Merkle proof
         const { pathElements, pathIndices } = tree.getProof(leafIndex);
         const merkleRoot = tree.getRoot();
-        console.log(`Merkle root: ${toHex(merkleRoot)}`);
+        log.step(`Merkle root: ${toHex(merkleRoot)}`);
 
         // 6. Prepare circuit input
         // recipient and relayer are encoded as bigint (uint160 of the address)
@@ -102,7 +139,7 @@ export const withdrawCommand = new Command("withdraw")
         };
 
         // 7. Generate Groth16 proof
-        console.log("Generating ZK proof (this may take a moment)...");
+        log.info("Generating ZK proof (this may take a moment)...");
         const { proof, publicSignals } = await generateProof(
           circuitInput,
           WASM_PATH,
@@ -118,7 +155,7 @@ export const withdrawCommand = new Command("withdraw")
 
         // 9. Submit withdrawal transaction
         const contract = getMixerContract(opts.rpc, privateKey, mixerAddress, mixerAbi);
-        console.log(`Submitting withdrawal to ${opts.recipient}...`);
+        log.info(`Submitting withdrawal to ${opts.recipient}...`);
 
         const tx = await contract.withdraw(
           [pA[0].toString(), pA[1].toString()],
@@ -134,24 +171,24 @@ export const withdrawCommand = new Command("withdraw")
           fee.toString()
         );
 
-        console.log(`Transaction sent: ${tx.hash}`);
-        console.log("Waiting for confirmation...");
+        log.step(`Transaction sent: ${tx.hash}`);
+        log.step("Waiting for confirmation...");
 
         const receipt = await tx.wait();
 
         console.log("\n====================================================");
-        console.log("WITHDRAWAL SUCCESSFUL");
+        log.success("WITHDRAWAL SUCCESSFUL");
         console.log("====================================================");
-        console.log(`Block:      ${receipt?.blockNumber}`);
-        console.log(`Tx hash:    ${receipt?.hash ?? tx.hash}`);
-        console.log(`Recipient:  ${opts.recipient}`);
+        log.step(`Block:      ${receipt?.blockNumber}`);
+        log.step(`Tx hash:    ${receipt?.hash ?? tx.hash}`);
+        log.step(`Recipient:  ${opts.recipient}`);
         if (fee > 0n) {
-          console.log(`Relayer:    ${relayer}`);
-          console.log(`Fee:        ${fee.toString()} wei`);
+          log.step(`Relayer:    ${relayer}`);
+          log.step(`Fee:        ${fee.toString()} wei`);
         }
         console.log("====================================================");
       } catch (err) {
-        console.error("Withdrawal failed:", (err as Error).message);
+        log.error(`Withdrawal failed: ${(err as Error).message}`);
         process.exit(1);
       }
     }
