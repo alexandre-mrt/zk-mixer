@@ -13,7 +13,8 @@
     "circuit:compile": "bash scripts/compile-circuit.sh",
     "circuit:verifier": "bash scripts/generate-verifier.sh",
     "verify:sepolia": "hardhat run scripts/verify.ts --network sepolia",
-    "setup:local": "bash scripts/local-setup.sh"
+    "setup:local": "bash scripts/local-setup.sh",
+    "check:sizes": "npx hardhat compile && npx ts-node scripts/check-sizes.ts"
   },
   "dependencies": {
     "@nomicfoundation/hardhat-toolbox": "^6.1.2",
