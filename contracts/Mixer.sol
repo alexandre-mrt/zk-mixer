@@ -166,6 +166,21 @@ contract Mixer is MerkleTree, ReentrancyGuard, Pausable, Ownable {
         emit Withdrawal(_recipient, _nullifierHash, _relayer, _fee);
     }
 
+    /// @notice Check if a nullifier hash has been spent
+    function isSpent(uint256 _nullifierHash) external view returns (bool) {
+        return nullifierHashes[_nullifierHash];
+    }
+
+    /// @notice Check if a commitment exists
+    function isCommitted(uint256 _commitment) external view returns (bool) {
+        return commitments[_commitment];
+    }
+
+    /// @notice Get the current deposit count
+    function getDepositCount() external view returns (uint32) {
+        return nextIndex;
+    }
+
     /// @notice Pause all deposits and withdrawals.
     /// @dev Only callable by the contract owner. Emits {Paused}.
     function pause() external onlyOwner {
