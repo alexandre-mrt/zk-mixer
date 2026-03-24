@@ -19,7 +19,7 @@
     "circomlibjs": "^0.1.7",
     "commander": "^14.0.3",
     "dotenv": "^17.3.1",
-    "ethers": "^6.14.0",
+    "ethers": "^6.16.0",
     "ffjavascript": "^0.3.1",
     "hardhat": "^2.22.0",
     "snarkjs": "^0.7.6"
