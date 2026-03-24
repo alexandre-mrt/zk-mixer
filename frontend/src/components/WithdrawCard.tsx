@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { parseNote, computeCommitment, computeNullifierHash } from "@/lib/crypto";
 import { buildTreeFromLeaves } from "@/lib/merkle-tree";
 import { generateWithdrawalProof } from "@/lib/proof";
-import { MIXER_ABI, MIXER_ADDRESS } from "@/lib/constants";
+import { MIXER_ABI, getMixerAddress, DEPLOY_BLOCK } from "@/lib/constants";
 
 type WithdrawStep =
   | "idle"
@@ -122,12 +122,15 @@ export function WithdrawCard() {
       // Step 3: Generate ZK proof
       setStep("generating-proof");
       const recipientBigInt = BigInt(recipient);
+      const relayerAddress = "0x0000000000000000000000000000000000000000";
+      const relayerBigInt = BigInt(relayerAddress);
       const fee = BigInt(0);
 
       const proofData = await generateWithdrawalProof({
         root: merkleProof.root,
         nullifierHash,
         recipient: recipientBigInt,
+        relayer: relayerBigInt,
         fee,
         secret,
         nullifier,

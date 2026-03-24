@@ -10,6 +10,7 @@ export type WithdrawalProofInput = {
   root: bigint;
   nullifierHash: bigint;
   recipient: bigint;
+  relayer: bigint;
   fee: bigint;
   secret: bigint;
   nullifier: bigint;
@@ -54,6 +55,7 @@ export async function generateWithdrawalProof(
     root: input.root.toString(),
     nullifierHash: input.nullifierHash.toString(),
     recipient: input.recipient.toString(),
+    relayer: input.relayer.toString(),
     fee: input.fee.toString(),
     secret: input.secret.toString(),
     nullifier: input.nullifier.toString(),
