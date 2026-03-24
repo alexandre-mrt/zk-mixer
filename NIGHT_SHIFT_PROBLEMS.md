@@ -6,7 +6,7 @@
 - 3 uncertainties
 - 0 tasks blocked
 - 0 fixes failed
-- 2 assumptions made
+- 3 assumptions made
 
 ## Problems
 
@@ -46,13 +46,13 @@
   Then change `Mixer.deploy(verifierAddress, DENOMINATION, MERKLE_TREE_HEIGHT)` to
   `Mixer.deploy(verifierAddress, DENOMINATION, MERKLE_TREE_HEIGHT, hasherAddress)`
 
-### DEPENDENCY: ethers v6 was missing from direct dependencies
+### UNCERTAINTY: ethers version mismatch between root package and hardhat-toolbox
 - **Iteration**: 3
-- **File**: package.json
-- **What I needed**: ethers ^6.14.0 installed at the project root (required by @nomicfoundation/hardhat-ethers@3.x)
-- **What I did**: The project declared no direct `ethers` dependency; bun resolved it as ethers@5.8.0 (from circomlibjs transitive). Running `npm install ethers@^6.14.0 --save --legacy-peer-deps` and then `bun install` fixed it. ethers@6.16.0 is now at node_modules/ethers. Added "ethers": "^6.14.0" to package.json.
-- **Confidence**: HIGH (all 41 tests pass after fix)
-- **User action needed**: None — the fix is applied. If bun.lock or node_modules is ever reset without the updated package.json, run `bun install` again to restore ethers v6.
+- **File**: cli/utils.ts:1
+- **What I needed**: ethers v6 (as specified in task)
+- **What I did**: The project root `node_modules/ethers` is v5.8.0 (a transitive dependency), but TypeScript resolves to ethers v6 via `@nomicfoundation/hardhat-ethers` types. The CLI files import `ethers` directly and use v6 API (`JsonRpcProvider`, `Wallet`, `Contract` from `"ethers"` top-level). This compiles cleanly under the current tsconfig. At runtime (bun run cli/index.ts), the ethers resolution may pick up v5 from the root node_modules if `bun install` hasn't been run in the worktree — the worktree has no local node_modules, so it will resolve from the parent project's node_modules where v5 lives.
+- **Confidence**: MEDIUM
+- **User action needed**: Before running the CLI: `cd` to the worktree root and run `bun install`. If runtime errors about missing v6 exports appear, add `"ethers": "^6.14.0"` as a direct dependency in package.json and reinstall.
 
 ### UNCERTAINTY: Verifier.sol placeholder always returns true
 - **Iteration**: 2
