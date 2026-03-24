@@ -1,0 +1,33 @@
+{
+  "name": "zk-mixer",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "test:circuits": "bun test test/circuit.test.ts",
+    "node": "hardhat node",
+    "deploy:local": "hardhat run scripts/deploy.ts --network localhost",
+    "deploy:sepolia": "hardhat run scripts/deploy.ts --network sepolia",
+    "cli": "bun run cli/index.ts",
+    "circuit:compile": "bash scripts/compile-circuit.sh",
+    "circuit:verifier": "bash scripts/generate-verifier.sh"
+  },
+  "dependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^6.1.2",
+    "circomlib": "^2.0.5",
+    "circomlibjs": "^0.1.7",
+    "commander": "^14.0.3",
+    "dotenv": "^17.3.1",
+    "ffjavascript": "^0.3.1",
+    "hardhat": "^2.22.0",
+    "snarkjs": "^0.7.6"
+  },
+  "devDependencies": {
+    "@types/chai": "^5.2.3",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^25.5.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.2"
+  }
+}
