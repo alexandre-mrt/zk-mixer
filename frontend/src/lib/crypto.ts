@@ -54,8 +54,8 @@ export async function generateNote(): Promise<Note> {
 }
 
 export function formatNote(secret: bigint, nullifier: bigint): string {
-  const secretHex = secret.toString(16).padStart(62, "0");
-  const nullifierHex = nullifier.toString(16).padStart(62, "0");
+  const secretHex = secret.toString(16).padStart(64, "0");
+  const nullifierHex = nullifier.toString(16).padStart(64, "0");
   return `zk-mixer-${secretHex}-${nullifierHex}`;
 }
 

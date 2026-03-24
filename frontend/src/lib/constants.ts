@@ -62,6 +62,5 @@ export const DENOMINATION = BigInt("100000000000000000"); // 0.1 ETH
 
 export const MERKLE_TREE_DEPTH = 20;
 
-export const ZERO_VALUE = BigInt(
-  "21663839004416932945382355908790599225266501822907911457504978515578255421292",
-);
+// Must match MerkleTree.sol constructor: zeros[0] = 0 (empty leaf)
+export const ZERO_VALUE = 0n;
