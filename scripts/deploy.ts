@@ -1,4 +1,6 @@
 import { ethers } from "hardhat";
+// @ts-ignore
+import { poseidonContract } from "circomlibjs";
 import fs from "fs";
 
 // NIGHT-SHIFT-REVIEW: snarkjs generates "Groth16Verifier" as the contract name.
@@ -19,6 +21,18 @@ async function main(): Promise<void> {
     "ETH"
   );
 
+  // Deploy Poseidon hasher
+  console.log("\nDeploying Poseidon hasher...");
+  const HasherFactory = new ethers.ContractFactory(
+    poseidonContract.generateABI(2),
+    poseidonContract.createCode(2),
+    deployer
+  );
+  const hasherContract = await HasherFactory.deploy();
+  await hasherContract.waitForDeployment();
+  const hasherAddress = await hasherContract.getAddress();
+  console.log("Hasher deployed to:", hasherAddress);
+
   // Deploy Verifier
   console.log(`\nDeploying ${VERIFIER_CONTRACT_NAME}...`);
   const Verifier = await ethers.getContractFactory(VERIFIER_CONTRACT_NAME);
@@ -27,10 +41,10 @@ async function main(): Promise<void> {
   const verifierAddress = await verifier.getAddress();
   console.log("Verifier deployed to:", verifierAddress);
 
-  // Deploy Mixer with verifier address, denomination, and Merkle tree height
+  // Deploy Mixer with verifier address, denomination, Merkle tree height, and hasher
   console.log("\nDeploying Mixer...");
   const Mixer = await ethers.getContractFactory("Mixer");
-  const mixer = await Mixer.deploy(verifierAddress, DENOMINATION, MERKLE_TREE_HEIGHT);
+  const mixer = await Mixer.deploy(verifierAddress, DENOMINATION, MERKLE_TREE_HEIGHT, hasherAddress);
   await mixer.waitForDeployment();
   const mixerAddress = await mixer.getAddress();
   console.log("Mixer deployed to:", mixerAddress);
@@ -38,6 +52,7 @@ async function main(): Promise<void> {
   // Save deployment addresses
   const network = await ethers.provider.getNetwork();
   const addresses = {
+    hasher: hasherAddress,
     verifier: verifierAddress,
     mixer: mixerAddress,
     network: network.name,
