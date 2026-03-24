@@ -51,6 +51,9 @@ contract Mixer is MerkleTree, ReentrancyGuard, Pausable, Ownable {
     /// @notice Fixed deposit/withdrawal amount in wei.
     uint256 public immutable denomination;
 
+    /// @notice Chain ID at deployment time — used to prevent cross-chain replay attacks.
+    uint256 public immutable deployedChainId;
+
     /// @notice Tracks spent nullifiers to prevent double-withdrawal.
     mapping(uint256 => bool) public nullifierHashes;
 
@@ -99,13 +102,20 @@ contract Mixer is MerkleTree, ReentrancyGuard, Pausable, Ownable {
 
         verifier = IVerifier(_verifier);
         denomination = _denomination;
+        deployedChainId = block.chainid;
+    }
+
+    /// @notice Reverts if the current chain differs from the deployment chain.
+    modifier onlyDeployedChain() {
+        require(block.chainid == deployedChainId, "wrong chain");
+        _;
     }
 
     /// @notice Deposit exactly `denomination` ETH and insert the commitment into the Merkle tree.
     /// @dev The commitment must be a non-zero BN254 field element not previously used.
     ///      Reverts if the contract is paused or reentered.
     /// @param _commitment Poseidon(secret, nullifier) computed off-chain by the depositor.
-    function deposit(uint256 _commitment) external payable nonReentrant whenNotPaused {
+    function deposit(uint256 _commitment) external payable nonReentrant whenNotPaused onlyDeployedChain {
         require(msg.value == denomination, "Mixer: incorrect deposit amount");
         require(!commitments[_commitment], "Mixer: duplicate commitment");
         require(_commitment != 0, "Mixer: commitment is zero");
@@ -139,7 +149,7 @@ contract Mixer is MerkleTree, ReentrancyGuard, Pausable, Ownable {
         address payable _recipient,
         address payable _relayer,
         uint256 _fee
-    ) external nonReentrant whenNotPaused {
+    ) external nonReentrant whenNotPaused onlyDeployedChain {
         require(_fee <= denomination, "Mixer: fee exceeds denomination");
         require(_recipient != address(0), "Mixer: recipient is zero address");
         require(!nullifierHashes[_nullifierHash], "Mixer: already spent");
