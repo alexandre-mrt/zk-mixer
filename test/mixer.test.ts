@@ -137,6 +137,19 @@ describe("Mixer", function () {
       expect(await mixer.isKnownRoot(root)).to.be.true;
     });
 
+    it("stores the deployment chain ID (31337 for Hardhat)", async function () {
+      const { mixer } = await loadFixture(deployMixerFixture);
+      expect(await mixer.deployedChainId()).to.equal(31337n);
+    });
+
+    it("deposit succeeds on the correct chain", async function () {
+      const { mixer, depositor } = await loadFixture(deployMixerFixture);
+      const commitment = randomCommitment();
+      await expect(
+        mixer.connect(depositor).deposit(commitment, { value: DENOMINATION })
+      ).to.emit(mixer, "Deposit");
+    });
+
     it("reverts when verifier is the zero address", async function () {
       const { hasherAddress } = await loadFixture(deployMixerFixture);
       const MixerFactory = await ethers.getContractFactory("Mixer");
