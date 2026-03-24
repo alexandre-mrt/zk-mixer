@@ -19,6 +19,9 @@ const config: HardhatUserConfig = {
           : [],
     },
   },
+  etherscan: {
+    apiKey: process.env.ETHERSCAN_API_KEY ?? "",
+  },
   paths: {
     sources: "./contracts",
     tests: "./test",
