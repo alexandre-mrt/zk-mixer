@@ -2,6 +2,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DepositCard } from "./DepositCard";
 import { WithdrawCard } from "./WithdrawCard";
 import { StatusCard } from "./StatusCard";
+import { HistoryCard } from "./HistoryCard";
 
 export function TabNav() {
   return (
@@ -17,6 +18,9 @@ export function TabNav() {
         <TabsTrigger value="status" className="flex-1">
           Status
         </TabsTrigger>
+        <TabsTrigger value="history" className="flex-1">
+          History
+        </TabsTrigger>
       </TabsList>
       </div>
 
@@ -30,6 +34,10 @@ export function TabNav() {
 
       <TabsContent value="status">
         <StatusCard />
+      </TabsContent>
+
+      <TabsContent value="history">
+        <HistoryCard />
       </TabsContent>
     </Tabs>
   );
