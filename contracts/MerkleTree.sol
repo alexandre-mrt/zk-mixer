@@ -7,26 +7,61 @@ interface IHasher {
     function poseidon(uint256[2] calldata inputs) external pure returns (uint256);
 }
 
-/// @notice Incremental Merkle tree using Poseidon hash.
-/// Stores the last ROOT_HISTORY_SIZE roots to support in-flight withdrawals.
+/// @title MerkleTree
+/// @notice Incremental Merkle tree using Poseidon hash over the BN254 scalar field.
+///
+/// @dev Algorithm:
+///   - Depth `levels` (1–32), supporting up to 2^levels leaves.
+///   - Leaf insertion is O(levels): walks from the leaf to the root, updating one
+///     `filledSubtrees` entry per level (the rightmost non-empty sibling seen so far).
+///   - Zero values are precomputed at deployment:
+///       zeros[0] = 0
+///       zeros[i] = Poseidon(zeros[i-1], zeros[i-1])
+///     These initialise `filledSubtrees` so that any unused subtree hashes correctly.
+///
+/// Ring buffer (root history):
+///   - The last ROOT_HISTORY_SIZE roots are retained in a circular array `roots[]`.
+///   - `currentRootIndex` points to the most recently written slot.
+///   - `isKnownRoot` scans the ring buffer backwards from `currentRootIndex`,
+///     allowing withdrawals to be proven against slightly stale roots (in-flight tolerance).
+///
+/// Constraints:
+///   - All leaf and node values must be < FIELD_SIZE (BN254 prime).
+///   - `nextIndex` is monotonically increasing; the tree cannot shrink.
 contract MerkleTree {
+    /// @notice BN254 (alt_bn128) scalar field prime.
+    /// All Poseidon inputs/outputs must be strictly less than this value.
     uint256 public constant FIELD_SIZE =
         21888242871839275222246405745257275088548364400416034343698204186575808495617;
+
+    /// @notice Number of recent roots retained for in-flight withdrawal tolerance.
+    /// Withdrawals can reference any root within the last ROOT_HISTORY_SIZE insertions.
     uint32 public constant ROOT_HISTORY_SIZE = 30;
 
+    /// @notice The deployed Poseidon(2) hasher contract.
     IHasher public immutable hasher;
+
+    /// @notice Tree depth (number of levels, not counting the leaf level).
     uint32 public immutable levels;
 
-    /// @dev filledSubtrees[i] = rightmost leaf hash seen at depth i.
-    ///      Initialized to zeros[i] = Poseidon(zeros[i-1], zeros[i-1]).
+    /// @notice filledSubtrees[i] is the rightmost leaf hash seen at depth i.
+    /// @dev Initialised to zeros[i] = Poseidon(zeros[i-1], zeros[i-1]) at deploy time.
+    ///      Updated on every insertion when a left-child node at level i is written.
     uint256[] public filledSubtrees;
 
-    /// @dev Ring buffer of the last ROOT_HISTORY_SIZE Merkle roots.
+    /// @notice Ring buffer holding the last ROOT_HISTORY_SIZE Merkle roots.
+    /// @dev Written at index `(currentRootIndex + 1) % ROOT_HISTORY_SIZE` on each insertion.
     uint256[] public roots;
 
+    /// @notice Index in `roots[]` of the most recently computed root.
     uint32 public currentRootIndex;
+
+    /// @notice Index at which the next leaf will be inserted.
+    /// @dev Monotonically increasing; reverts when it reaches 2^levels (tree full).
     uint32 public nextIndex;
 
+    /// @param _levels  Tree depth (must satisfy 0 < _levels <= 32).
+    /// @param _hasher  Address of the deployed Poseidon(2) contract.
     constructor(uint32 _levels, address _hasher) {
         require(_levels > 0 && _levels <= 32, "MerkleTree: levels out of range");
         require(_hasher != address(0), "MerkleTree: hasher is zero address");
@@ -47,15 +82,23 @@ contract MerkleTree {
         roots[0] = currentZero; // initial root of empty tree
     }
 
-    /// @notice Hash two field elements using Poseidon.
+    /// @notice Hash two BN254 field elements using Poseidon.
+    /// @dev Delegates to the external `hasher` contract.
+    ///      Both inputs must be < FIELD_SIZE; reverts otherwise.
+    /// @param _left  Left child value.
+    /// @param _right Right child value.
+    /// @return       Poseidon(_left, _right).
     function hashLeftRight(uint256 _left, uint256 _right) public view returns (uint256) {
         require(_left < FIELD_SIZE, "MerkleTree: left overflow");
         require(_right < FIELD_SIZE, "MerkleTree: right overflow");
         return hasher.poseidon([_left, _right]);
     }
 
-    /// @notice Insert a leaf into the tree. Returns the leaf index.
-    /// @dev O(levels) gas. Updates filledSubtrees and pushes a new root.
+    /// @notice Insert a leaf into the tree and record the new Merkle root.
+    /// @dev O(levels) gas. Updates `filledSubtrees` for each left-child on the path,
+    ///      then writes the new root into the ring buffer.
+    /// @param _leaf  The leaf value to insert (must be a valid field element).
+    /// @return index The 0-based leaf index assigned to this insertion.
     function _insert(uint256 _leaf) internal returns (uint32 index) {
         uint32 _nextIndex = nextIndex;
         require(_nextIndex < uint32(2) ** levels, "MerkleTree: tree is full");
@@ -90,7 +133,11 @@ contract MerkleTree {
         return _nextIndex;
     }
 
-    /// @notice Check whether _root appears in the root history.
+    /// @notice Check whether `_root` appears anywhere in the root ring buffer.
+    /// @dev Scans backwards from `currentRootIndex` through all ROOT_HISTORY_SIZE slots.
+    ///      Returns false immediately for the zero root (never a valid tree root).
+    /// @param _root  Candidate Merkle root to verify.
+    /// @return       True if `_root` is found in the history, false otherwise.
     function isKnownRoot(uint256 _root) public view returns (bool) {
         if (_root == 0) return false;
 
@@ -109,7 +156,8 @@ contract MerkleTree {
         return false;
     }
 
-    /// @notice Return the most recently inserted root.
+    /// @notice Return the most recently inserted Merkle root.
+    /// @return The root at `roots[currentRootIndex]`.
     function getLastRoot() public view returns (uint256) {
         return roots[currentRootIndex];
     }
