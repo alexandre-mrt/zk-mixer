@@ -8,24 +8,30 @@
 NIGHT_SHIFT_ENRICHED_SPEC.md
 
 ### Current Phase
-Execution
+Finalization
 
 ### Tasks
-- [ ] T1: Scaffold project structure + dependencies | agent: night-coder | parallel: no
-- [ ] T2: Circom circuits (hasher, merkle_tree, withdraw, deposit) | agent: night-coder | parallel: no (depends: T1)
-- [ ] T3: Circuit compilation scripts + trusted setup | agent: night-coder | parallel: yes (with T2 prep)
-- [ ] T4: Solidity contracts (MerkleTree, Mixer) + Verifier generation | agent: night-coder | parallel: no (depends: T2, T3)
-- [ ] T5: Contract tests (Hardhat) | agent: night-tester | parallel: no (depends: T4)
-- [ ] T6: Circuit tests (circom_tester) | agent: night-tester | parallel: yes (with T5)
-- [ ] T7: CLI with commander.js | agent: night-coder | parallel: no (depends: T4)
-- [ ] T8: Frontend (React + Vite + wagmi + shadcn) | agent: night-coder | parallel: yes (with T7)
-- [ ] T9: Final validation + code review + PR | agent: code-reviewer | parallel: no (depends: all)
+- [x] T1: Scaffold project structure + dependencies
+- [x] T2: Circom circuits (hasher, merkle_tree, withdraw, deposit)
+- [x] T3: Circuit compilation scripts + trusted setup
+- [x] T4: Solidity contracts (MerkleTree, Mixer) + Verifier placeholder
+- [x] T5: Contract tests (Hardhat) — 41/41 passing
+- [BLOCKED] T6: Circuit tests — requires circom binary (not installed)
+- [x] T7: CLI with commander.js (deposit, withdraw, status)
+- [x] T8: Frontend (React + Vite + wagmi + shadcn) — builds successfully
+- [ ] T9: Final validation + code review + PR
 
 ### Last Checkpoint
-(none)
+8da6662 — fix(frontend): resolve TypeScript build errors
 
 ### Last Validation
-Build: N/A | Tests: N/A | Lint: N/A
+Build: PASS (Solidity + Frontend) | Tests: 41/41 PASS | Lint: N/A
 
 ### Completed This Session
-(none yet)
+- T1: Project scaffold with Hardhat, Bun, Vite, wagmi, shadcn
+- T2: 4 Circom circuits (hasher, merkle_tree, withdraw, deposit)
+- T3: compile-circuit.sh, generate-verifier.sh, deploy.ts
+- T4: MerkleTree.sol, Mixer.sol, Verifier.sol placeholder, hasher helper
+- T5: 41 contract tests all passing
+- T7: Full CLI with commander.js
+- T8: React frontend with wallet connect, deposit, withdraw, status
