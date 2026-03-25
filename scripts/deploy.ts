@@ -64,6 +64,14 @@ async function main(): Promise<void> {
   await setTx.wait();
   console.log("DepositReceipt registered.");
 
+  // Deploy MixerLens (read-only aggregator, no constructor args)
+  console.log("\nDeploying MixerLens...");
+  const MixerLensFactory = await ethers.getContractFactory("MixerLens");
+  const mixerLens = await MixerLensFactory.deploy();
+  await mixerLens.waitForDeployment();
+  const mixerLensAddress = await mixerLens.getAddress();
+  console.log("MixerLens deployed to:", mixerLensAddress);
+
   // Save deployment addresses
   const network = await ethers.provider.getNetwork();
   const addresses = {
@@ -71,6 +79,7 @@ async function main(): Promise<void> {
     verifier: verifierAddress,
     mixer: mixerAddress,
     depositReceipt: depositReceiptAddress,
+    mixerLens: mixerLensAddress,
     network: network.name,
     chainId: Number(network.chainId),
     deployer: deployer.address,
