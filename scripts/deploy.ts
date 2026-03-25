@@ -49,12 +49,28 @@ async function main(): Promise<void> {
   const mixerAddress = await mixer.getAddress();
   console.log("Mixer deployed to:", mixerAddress);
 
+  // Deploy DepositReceipt (optional, informational NFT)
+  console.log("\nDeploying DepositReceipt...");
+  const DepositReceiptFactory = await ethers.getContractFactory("DepositReceipt");
+  const depositReceipt = await DepositReceiptFactory.deploy(mixerAddress);
+  await depositReceipt.waitForDeployment();
+  const depositReceiptAddress = await depositReceipt.getAddress();
+  console.log("DepositReceipt deployed to:", depositReceiptAddress);
+
+  // Register receipt contract in Mixer
+  console.log("\nRegistering DepositReceipt in Mixer...");
+  const mixerContract = await ethers.getContractAt("Mixer", mixerAddress);
+  const setTx = await mixerContract.setDepositReceipt(depositReceiptAddress);
+  await setTx.wait();
+  console.log("DepositReceipt registered.");
+
   // Save deployment addresses
   const network = await ethers.provider.getNetwork();
   const addresses = {
     hasher: hasherAddress,
     verifier: verifierAddress,
     mixer: mixerAddress,
+    depositReceipt: depositReceiptAddress,
     network: network.name,
     chainId: Number(network.chainId),
     deployer: deployer.address,

@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "./MerkleTree.sol";
+import "./DepositReceipt.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -59,6 +60,10 @@ contract Mixer is MerkleTree, ReentrancyGuard, Pausable, Ownable {
 
     /// @notice Tracks known commitments to prevent duplicate deposits.
     mapping(uint256 => bool) public commitments;
+
+    /// @notice Optional ERC721 receipt contract. When set, mints a soulbound NFT on each deposit.
+    /// The receipt is purely informational — the ZK proof is what proves ownership for withdrawal.
+    DepositReceipt public depositReceipt;
 
     /// @notice Cumulative amount deposited across all deposits (in wei).
     uint256 public totalDeposited;
@@ -126,6 +131,10 @@ contract Mixer is MerkleTree, ReentrancyGuard, Pausable, Ownable {
         totalDeposited += denomination;
 
         emit Deposit(_commitment, insertedIndex, block.timestamp);
+
+        if (address(depositReceipt) != address(0)) {
+            depositReceipt.mint(msg.sender, _commitment);
+        }
     }
 
     /// @notice Withdraw funds by proving knowledge of a valid unspent note.
@@ -229,5 +238,12 @@ contract Mixer is MerkleTree, ReentrancyGuard, Pausable, Ownable {
     /// @dev Only callable by the contract owner. Emits {Unpaused}.
     function unpause() external onlyOwner {
         _unpause();
+    }
+
+    /// @notice Set (or unset) the optional ERC721 deposit receipt contract.
+    /// @dev Pass address(0) to disable receipt minting. Only callable by the owner.
+    /// @param _receipt Address of a deployed DepositReceipt contract, or address(0) to disable.
+    function setDepositReceipt(address _receipt) external onlyOwner {
+        depositReceipt = DepositReceipt(_receipt);
     }
 }
