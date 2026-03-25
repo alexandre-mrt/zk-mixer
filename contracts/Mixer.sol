@@ -76,6 +76,12 @@ contract Mixer is MerkleTree, ReentrancyGuard, Pausable, Ownable {
     /// @notice Tracks the number of deposits made by each address.
     mapping(address => uint256) public depositsPerAddress;
 
+    /// @notice Minimum seconds that must elapse between deposits from the same address (0 = no cooldown).
+    uint256 public depositCooldown;
+
+    /// @notice Tracks the last deposit timestamp per address for cooldown enforcement.
+    mapping(address => uint256) public lastDepositTime;
+
     /// @notice Cumulative amount deposited across all deposits (in wei).
     uint256 public totalDeposited;
 
@@ -108,6 +114,10 @@ contract Mixer is MerkleTree, ReentrancyGuard, Pausable, Ownable {
     /// @notice Emitted when the per-address deposit limit is updated.
     /// @param newMax New maximum deposits per address (0 = unlimited).
     event MaxDepositsPerAddressUpdated(uint256 newMax);
+
+    /// @notice Emitted when the deposit cooldown period is updated.
+    /// @param newCooldown New cooldown duration in seconds (0 = no cooldown).
+    event DepositCooldownUpdated(uint256 newCooldown);
 
     /// @notice Emitted when a commitment is successfully inserted into the tree.
     /// @param commitment  Poseidon(secret, nullifier) provided by the depositor.
@@ -191,11 +201,15 @@ contract Mixer is MerkleTree, ReentrancyGuard, Pausable, Ownable {
         if (maxDepositsPerAddress > 0) {
             require(depositsPerAddress[msg.sender] < maxDepositsPerAddress, "Mixer: deposit limit reached");
         }
+        if (depositCooldown > 0) {
+            require(block.timestamp >= lastDepositTime[msg.sender] + depositCooldown, "Mixer: deposit cooldown active");
+        }
 
         uint32 insertedIndex = _insert(_commitment);
         commitments[_commitment] = true;
         commitmentIndex[_commitment] = insertedIndex;
         depositsPerAddress[msg.sender]++;
+        lastDepositTime[msg.sender] = block.timestamp;
         totalDeposited += denomination;
 
         emit Deposit(_commitment, insertedIndex, block.timestamp);
@@ -341,6 +355,19 @@ contract Mixer is MerkleTree, ReentrancyGuard, Pausable, Ownable {
     {
         maxDepositsPerAddress = _max;
         emit MaxDepositsPerAddressUpdated(_max);
+    }
+
+    /// @notice Sets the per-address deposit cooldown period.
+    /// @dev Must be preceded by queueAction(keccak256(abi.encode("setDepositCooldown", _cooldown)))
+    ///      and waited TIMELOCK_DELAY. Set to 0 to disable the cooldown (default).
+    /// @param _cooldown Minimum seconds between deposits from the same address (0 = no cooldown).
+    function setDepositCooldown(uint256 _cooldown)
+        external
+        onlyOwner
+        timelockReady(keccak256(abi.encode("setDepositCooldown", _cooldown)))
+    {
+        depositCooldown = _cooldown;
+        emit DepositCooldownUpdated(_cooldown);
     }
 
     /// @notice Returns how many more deposits an address can make.
