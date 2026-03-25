@@ -34,8 +34,17 @@ export function StatusCard() {
     functionName: "getStats",
   });
 
+  const { data: poolHealth } = useReadContract({
+    address: getMixerAddress(),
+    abi: MIXER_ABI,
+    functionName: "getPoolHealth",
+  });
+
   const totalDeposited = stats?.[0];
   const totalWithdrawn = stats?.[1];
+  const anonymitySetSize = poolHealth?.[0];
+  const treeUtilization = poolHealth?.[1];
+  const poolHealthPaused = poolHealth?.[3];
 
   if (!isConnected) {
     return (
@@ -104,6 +113,27 @@ export function StatusCard() {
             <span className="text-sm text-zinc-400">Denomination</span>
             <span className="font-mono font-semibold text-emerald-400">
               0.1 ETH
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg bg-zinc-800 px-4 py-3">
+            <span className="text-sm text-zinc-400">Anonymity Set Size</span>
+            <span className="font-mono font-semibold text-violet-400">
+              {anonymitySetSize !== undefined ? anonymitySetSize.toString() : "—"}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg bg-zinc-800 px-4 py-3">
+            <span className="text-sm text-zinc-400">Tree Utilization</span>
+            <span className="font-mono font-semibold text-zinc-100">
+              {treeUtilization !== undefined ? `${treeUtilization.toString()}%` : "—"}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg bg-zinc-800 px-4 py-3">
+            <span className="text-sm text-zinc-400">Pool Status</span>
+            <span className={`font-mono font-semibold ${poolHealthPaused ? "text-rose-400" : "text-emerald-400"}`}>
+              {poolHealthPaused === undefined ? "—" : poolHealthPaused ? "Paused" : "Active"}
             </span>
           </div>
         </div>

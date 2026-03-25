@@ -780,7 +780,126 @@ describe("Mixer", function () {
   });
 
   // -------------------------------------------------------------------------
-  // 7. Integration
+  // 7. Anonymity Set and Pool Health
+  // -------------------------------------------------------------------------
+
+  describe("Anonymity Set and Pool Health", function () {
+    it("getAnonymitySetSize returns 0 before any deposit", async function () {
+      const { mixer } = await loadFixture(deployMixerFixture);
+      expect(await mixer.getAnonymitySetSize()).to.equal(0n);
+    });
+
+    it("getAnonymitySetSize increments after each deposit", async function () {
+      const { mixer, depositor } = await loadFixture(deployMixerFixture);
+      await doDeposit(mixer, depositor);
+      expect(await mixer.getAnonymitySetSize()).to.equal(1n);
+      await doDeposit(mixer, depositor);
+      expect(await mixer.getAnonymitySetSize()).to.equal(2n);
+    });
+
+    it("getAnonymitySetSize decrements after a withdrawal", async function () {
+      const { mixer, depositor, recipient, relayer } =
+        await loadFixture(deployMixerFixture);
+      const recipientAddr = await recipient.getAddress();
+      const relayerAddr = await relayer.getAddress();
+      const [owner] = await ethers.getSigners();
+
+      await doDeposit(mixer, depositor);
+      await doDeposit(mixer, depositor);
+      expect(await mixer.getAnonymitySetSize()).to.equal(2n);
+
+      const root = await mixer.getLastRoot();
+      const nullifierHash = randomCommitment();
+      await doWithdraw(mixer, root, nullifierHash, recipientAddr, relayerAddr, 0n, owner);
+
+      expect(await mixer.getAnonymitySetSize()).to.equal(1n);
+    });
+
+    it("getAnonymitySetSize equals 0 when all deposits are withdrawn", async function () {
+      const { mixer, depositor, recipient, relayer } =
+        await loadFixture(deployMixerFixture);
+      const recipientAddr = await recipient.getAddress();
+      const relayerAddr = await relayer.getAddress();
+      const [owner] = await ethers.getSigners();
+
+      await doDeposit(mixer, depositor);
+      const root = await mixer.getLastRoot();
+      const nullifierHash = randomCommitment();
+      await doWithdraw(mixer, root, nullifierHash, recipientAddr, relayerAddr, 0n, owner);
+
+      expect(await mixer.getAnonymitySetSize()).to.equal(0n);
+    });
+
+    it("getPoolHealth returns all zero/false values before any deposit", async function () {
+      const { mixer } = await loadFixture(deployMixerFixture);
+      const [anonymitySetSize, treeUtilization, poolBalance, isPaused] =
+        await mixer.getPoolHealth();
+
+      expect(anonymitySetSize).to.equal(0n);
+      expect(treeUtilization).to.equal(0n);
+      expect(poolBalance).to.equal(0n);
+      expect(isPaused).to.be.false;
+    });
+
+    it("getPoolHealth returns correct values after deposit", async function () {
+      const { mixer, depositor } = await loadFixture(deployMixerFixture);
+      const mixerAddr = await mixer.getAddress();
+
+      await doDeposit(mixer, depositor);
+
+      const [anonymitySetSize, treeUtilization, poolBalance, isPaused] =
+        await mixer.getPoolHealth();
+
+      expect(anonymitySetSize).to.equal(1n);
+      expect(treeUtilization).to.be.greaterThan(0n);
+      expect(poolBalance).to.equal(await ethers.provider.getBalance(mixerAddr));
+      expect(isPaused).to.be.false;
+    });
+
+    it("getPoolHealth returns correct values after deposit and withdrawal", async function () {
+      const { mixer, depositor, recipient, relayer } =
+        await loadFixture(deployMixerFixture);
+      const recipientAddr = await recipient.getAddress();
+      const relayerAddr = await relayer.getAddress();
+      const mixerAddr = await mixer.getAddress();
+      const [owner] = await ethers.getSigners();
+
+      await doDeposit(mixer, depositor);
+      await doDeposit(mixer, depositor);
+
+      const root = await mixer.getLastRoot();
+      const nullifierHash = randomCommitment();
+      await doWithdraw(mixer, root, nullifierHash, recipientAddr, relayerAddr, 0n, owner);
+
+      const [anonymitySetSize, treeUtilization, poolBalance, isPaused] =
+        await mixer.getPoolHealth();
+
+      expect(anonymitySetSize).to.equal(1n);
+      expect(treeUtilization).to.be.greaterThan(0n);
+      expect(poolBalance).to.equal(await ethers.provider.getBalance(mixerAddr));
+      expect(isPaused).to.be.false;
+    });
+
+    it("getPoolHealth isPaused reflects contract pause state", async function () {
+      const { mixer, owner } = await loadFixture(deployMixerFixture);
+
+      const [, , , isPausedBefore] = await mixer.getPoolHealth();
+      expect(isPausedBefore).to.be.false;
+
+      await mixer.connect(owner).pause();
+
+      const [, , , isPausedAfter] = await mixer.getPoolHealth();
+      expect(isPausedAfter).to.be.true;
+
+      await mixer.connect(owner).unpause();
+
+      const [, , , isPausedUnpaused] = await mixer.getPoolHealth();
+      expect(isPausedUnpaused).to.be.false;
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // 8. Integration (was 7)
   // -------------------------------------------------------------------------
 
   describe("Integration", function () {
