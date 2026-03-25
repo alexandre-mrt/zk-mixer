@@ -948,4 +948,54 @@ describe("Mixer", function () {
       expect(history.some((r) => r === lastRoot)).to.be.true;
     });
   });
+
+  // -------------------------------------------------------------------------
+  // 8. Commitment Index
+  // -------------------------------------------------------------------------
+
+  describe("Commitment Index", function () {
+    it("getCommitmentIndex returns 0 for the first deposit", async function () {
+      const { mixer, depositor } = await loadFixture(deployMixerFixture);
+      const { commitment } = await doDeposit(mixer, depositor);
+      expect(await mixer.getCommitmentIndex(commitment)).to.equal(0);
+    });
+
+    it("getCommitmentIndex returns the correct index after deposit", async function () {
+      const { mixer, depositor } = await loadFixture(deployMixerFixture);
+      const { commitment } = await doDeposit(mixer, depositor);
+      const index = await mixer.getCommitmentIndex(commitment);
+      expect(index).to.equal(0n);
+    });
+
+    it("getCommitmentIndex reverts for an unknown commitment", async function () {
+      const { mixer } = await loadFixture(deployMixerFixture);
+      const unknown = randomCommitment();
+      await expect(mixer.getCommitmentIndex(unknown)).to.be.revertedWith(
+        "commitment not found"
+      );
+    });
+
+    it("multiple deposits have sequential indices", async function () {
+      const { mixer, depositor } = await loadFixture(deployMixerFixture);
+      const c0 = randomCommitment();
+      const c1 = randomCommitment();
+      const c2 = randomCommitment();
+
+      await mixer.connect(depositor).deposit(c0, { value: DENOMINATION });
+      await mixer.connect(depositor).deposit(c1, { value: DENOMINATION });
+      await mixer.connect(depositor).deposit(c2, { value: DENOMINATION });
+
+      expect(await mixer.getCommitmentIndex(c0)).to.equal(0);
+      expect(await mixer.getCommitmentIndex(c1)).to.equal(1);
+      expect(await mixer.getCommitmentIndex(c2)).to.equal(2);
+    });
+
+    it("commitmentIndex mapping matches getCommitmentIndex", async function () {
+      const { mixer, depositor } = await loadFixture(deployMixerFixture);
+      const { commitment } = await doDeposit(mixer, depositor);
+      const fromMapping = await mixer.commitmentIndex(commitment);
+      const fromGetter = await mixer.getCommitmentIndex(commitment);
+      expect(fromMapping).to.equal(fromGetter);
+    });
+  });
 });
