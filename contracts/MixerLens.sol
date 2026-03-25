@@ -21,6 +21,7 @@ contract MixerLens {
         bool isPaused;
         uint256 maxDepositsPerAddress;
         address owner;
+        string version;
     }
 
     /// @notice Return a full snapshot of the given Mixer's current state.
@@ -49,7 +50,8 @@ contract MixerLens {
             denomination: mixer.denomination(),
             isPaused: mixer.paused(),
             maxDepositsPerAddress: mixer.maxDepositsPerAddress(),
-            owner: mixer.owner()
+            owner: mixer.owner(),
+            version: mixer.getVersion()
         });
     }
 }
