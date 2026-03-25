@@ -197,6 +197,22 @@ describe("Contract Interface", function () {
       const pending = await mixer.pendingAction();
       expect(pending.actionHash).to.equal(actionHash);
     });
+
+    it("supportsInterface returns true for ERC165 (0x01ffc9a7)", async function () {
+      const { mixer } = await loadFixture(deployFixture);
+      expect(await mixer.supportsInterface("0x01ffc9a7")).to.equal(true);
+    });
+
+    it("supportsInterface returns true for MIXER_INTERFACE_ID", async function () {
+      const { mixer } = await loadFixture(deployFixture);
+      const mixerInterfaceId = await mixer.MIXER_INTERFACE_ID();
+      expect(await mixer.supportsInterface(mixerInterfaceId)).to.equal(true);
+    });
+
+    it("supportsInterface returns false for unknown bytes4", async function () {
+      const { mixer } = await loadFixture(deployFixture);
+      expect(await mixer.supportsInterface("0xdeadbeef")).to.equal(false);
+    });
   });
 
   // -------------------------------------------------------------------------
