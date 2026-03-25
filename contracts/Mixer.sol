@@ -65,6 +65,10 @@ contract Mixer is MerkleTree, ReentrancyGuard, Pausable, Ownable {
     /// Allows clients to look up the tree position of any commitment without scanning events.
     mapping(uint256 => uint32) public commitmentIndex;
 
+    /// @notice Reverse lookup: maps a leaf index to its commitment.
+    /// Allows clients to retrieve the commitment at any tree position without scanning events.
+    mapping(uint32 => uint256) public indexToCommitment;
+
     /// @notice Optional ERC721 receipt contract. When set, mints a soulbound NFT on each deposit.
     /// The receipt is purely informational — the ZK proof is what proves ownership for withdrawal.
     DepositReceipt public depositReceipt;
@@ -208,6 +212,7 @@ contract Mixer is MerkleTree, ReentrancyGuard, Pausable, Ownable {
         uint32 insertedIndex = _insert(_commitment);
         commitments[_commitment] = true;
         commitmentIndex[_commitment] = insertedIndex;
+        indexToCommitment[insertedIndex] = _commitment;
         depositsPerAddress[msg.sender]++;
         lastDepositTime[msg.sender] = block.timestamp;
         totalDeposited += denomination;
@@ -277,6 +282,21 @@ contract Mixer is MerkleTree, ReentrancyGuard, Pausable, Ownable {
         }
 
         emit Withdrawal(_recipient, _nullifierHash, _relayer, _fee);
+    }
+
+    /// @notice Get a range of commitments by index (for pagination)
+    /// @param _from  First leaf index to return (inclusive)
+    /// @param _count Maximum number of commitments to return
+    /// @return Array of commitments from index _from up to min(_from + _count, nextIndex)
+    function getCommitments(uint32 _from, uint32 _count) external view returns (uint256[] memory) {
+        uint32 end = _from + _count;
+        if (end > nextIndex) end = nextIndex;
+        if (_from >= end) return new uint256[](0);
+        uint256[] memory result = new uint256[](end - _from);
+        for (uint32 i = _from; i < end; i++) {
+            result[i - _from] = indexToCommitment[i];
+        }
+        return result;
     }
 
     /// @notice Check if a nullifier hash has been spent
