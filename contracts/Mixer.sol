@@ -61,6 +61,10 @@ contract Mixer is MerkleTree, ReentrancyGuard, Pausable, Ownable {
     /// @notice Tracks known commitments to prevent duplicate deposits.
     mapping(uint256 => bool) public commitments;
 
+    /// @notice Maps a commitment to its leaf index in the Merkle tree.
+    /// Allows clients to look up the tree position of any commitment without scanning events.
+    mapping(uint256 => uint32) public commitmentIndex;
+
     /// @notice Optional ERC721 receipt contract. When set, mints a soulbound NFT on each deposit.
     /// The receipt is purely informational — the ZK proof is what proves ownership for withdrawal.
     DepositReceipt public depositReceipt;
@@ -128,6 +132,7 @@ contract Mixer is MerkleTree, ReentrancyGuard, Pausable, Ownable {
 
         uint32 insertedIndex = _insert(_commitment);
         commitments[_commitment] = true;
+        commitmentIndex[_commitment] = insertedIndex;
         totalDeposited += denomination;
 
         emit Deposit(_commitment, insertedIndex, block.timestamp);
@@ -205,6 +210,15 @@ contract Mixer is MerkleTree, ReentrancyGuard, Pausable, Ownable {
     /// @notice Check if a commitment exists
     function isCommitted(uint256 _commitment) external view returns (bool) {
         return commitments[_commitment];
+    }
+
+    /// @notice Return the leaf index of a commitment in the Merkle tree.
+    /// @dev Reverts if the commitment has not been deposited.
+    /// @param _commitment The commitment whose tree position is requested.
+    /// @return The zero-based leaf index assigned when the commitment was inserted.
+    function getCommitmentIndex(uint256 _commitment) external view returns (uint32) {
+        require(commitments[_commitment], "commitment not found");
+        return commitmentIndex[_commitment];
     }
 
     /// @notice Get the current deposit count
