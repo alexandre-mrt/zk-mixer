@@ -90,6 +90,24 @@ async function main(): Promise<void> {
   fs.writeFileSync("deployment.json", JSON.stringify(addresses, null, 2));
   console.log("\nDeployment addresses saved to deployment.json");
   console.log(JSON.stringify(addresses, null, 2));
+
+  // Append to history
+  const historyPath = "deployments-history.json";
+  let history: any[] = [];
+  try {
+    if (fs.existsSync(historyPath)) {
+      history = JSON.parse(fs.readFileSync(historyPath, "utf-8"));
+    }
+  } catch {}
+
+  history.push({
+    ...addresses,
+    deployedAt: new Date().toISOString(),
+    blockNumber: await ethers.provider.getBlockNumber(),
+  });
+
+  fs.writeFileSync(historyPath, JSON.stringify(history, null, 2));
+  console.log(`Deployment history saved (${history.length} total deployments)`);
 }
 
 main().catch((error) => {
