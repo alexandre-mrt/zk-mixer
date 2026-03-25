@@ -11,6 +11,7 @@ frontend/node_modules/
 frontend/dist/
 *.ptau
 deployment.json
+deployments-history.json
 notes/
 .claude/
 package-lock.json
