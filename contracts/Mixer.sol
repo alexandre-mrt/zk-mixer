@@ -421,6 +421,17 @@ contract Mixer is MerkleTree, ReentrancyGuard, Pausable, Ownable {
         return used >= maxDepositsPerAddress ? 0 : maxDepositsPerAddress - used;
     }
 
+    /// @notice Compute the Poseidon commitment from a secret and nullifier.
+    /// @dev Convenience wrapper around hashLeftRight for clients to verify their note
+    ///      before attempting a withdrawal. Matches the commitment formula used at deposit:
+    ///      commitment = Poseidon(secret, nullifier).
+    /// @param _secret   The secret component of the note (must be < FIELD_SIZE).
+    /// @param _nullifier The nullifier component of the note (must be < FIELD_SIZE).
+    /// @return The Poseidon hash of (_secret, _nullifier).
+    function verifyCommitment(uint256 _secret, uint256 _nullifier) external view returns (uint256) {
+        return hashLeftRight(_secret, _nullifier);
+    }
+
     /// @notice Pause all deposits and withdrawals.
     /// @dev Only callable by the contract owner. Emits {Paused}.
     function pause() external onlyOwner {
