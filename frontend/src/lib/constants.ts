@@ -65,6 +65,23 @@ export const MIXER_ABI = [
       { name: "timestamp", type: "uint256", indexed: false },
     ],
   },
+  {
+    type: "event",
+    name: "Withdrawal",
+    inputs: [
+      { name: "to", type: "address", indexed: false },
+      { name: "nullifierHash", type: "uint256", indexed: false },
+      { name: "relayer", type: "address", indexed: true },
+      { name: "fee", type: "uint256", indexed: false },
+    ],
+  },
+  {
+    type: "function",
+    name: "isSpent",
+    inputs: [{ name: "_nullifierHash", type: "uint256" }],
+    outputs: [{ type: "bool" }],
+    stateMutability: "view",
+  },
 ] as const;
 
 // Placeholder — update after deployment
