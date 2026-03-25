@@ -2,6 +2,8 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
+import "@openzeppelin/contracts/utils/Base64.sol";
 
 /// @title DepositReceipt — ERC721 receipt for mixer deposits
 /// @notice Minted on each deposit as a non-transferable receipt (soulbound).
@@ -34,6 +36,26 @@ contract DepositReceipt is ERC721 {
         tokenCommitment[tokenId] = _commitment;
         tokenTimestamp[tokenId] = block.timestamp;
         return tokenId;
+    }
+
+    /// @notice Returns on-chain base64-encoded JSON metadata for the given token.
+    /// @param tokenId The token to query.
+    function tokenURI(uint256 tokenId) public view override returns (string memory) {
+        _requireOwned(tokenId);
+
+        string memory json = string(abi.encodePacked(
+            '{"name":"Deposit Receipt #', Strings.toString(tokenId),
+            '","description":"ZK Privacy Pool deposit receipt (soulbound)",',
+            '"attributes":[',
+            '{"trait_type":"Commitment","value":"', Strings.toHexString(tokenCommitment[tokenId], 32), '"},',
+            '{"trait_type":"Timestamp","value":"', Strings.toString(tokenTimestamp[tokenId]), '"}',
+            ']}'
+        ));
+
+        return string(abi.encodePacked(
+            "data:application/json;base64,",
+            Base64.encode(bytes(json))
+        ));
     }
 
     /// @notice Soulbound — disable all transfers.
