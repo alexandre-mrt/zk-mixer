@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
+import { loadFixture, time } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { deployHasher } from "./helpers/hasher";
 import type { Mixer } from "../typechain-types";
 
@@ -35,6 +35,17 @@ async function doDeposit(mixer: Mixer, signer: Awaited<ReturnType<typeof ethers.
   return c;
 }
 
+type Signer = Awaited<ReturnType<typeof ethers.getSigners>>[number];
+
+async function timelockSetMaxDeposits(mixer: Mixer, owner: Signer, _max: bigint): Promise<void> {
+  const actionHash = ethers.keccak256(
+    ethers.AbiCoder.defaultAbiCoder().encode(["string", "uint256"], ["setMaxDepositsPerAddress", _max])
+  );
+  await mixer.connect(owner).queueAction(actionHash);
+  await time.increase(24 * 60 * 60 + 1); // 1 day + 1 second
+  await mixer.connect(owner).setMaxDepositsPerAddress(_max);
+}
+
 describe("Mixer — per-address deposit limit", function () {
   describe("default state", function () {
     it("maxDepositsPerAddress defaults to 0 (unlimited)", async function () {
@@ -61,13 +72,21 @@ describe("Mixer — per-address deposit limit", function () {
   describe("setMaxDepositsPerAddress", function () {
     it("only owner can set the limit", async function () {
       const { mixer, alice } = await loadFixture(deployMixerFixture);
+      const actionHash = ethers.keccak256(
+        ethers.AbiCoder.defaultAbiCoder().encode(["string", "uint256"], ["setMaxDepositsPerAddress", 3n])
+      );
       await expect(
-        mixer.connect(alice).setMaxDepositsPerAddress(3n)
+        mixer.connect(alice).queueAction(actionHash)
       ).to.be.revertedWithCustomError(mixer, "OwnableUnauthorizedAccount");
     });
 
     it("owner can set the limit and event is emitted", async function () {
       const { mixer, owner } = await loadFixture(deployMixerFixture);
+      const actionHash = ethers.keccak256(
+        ethers.AbiCoder.defaultAbiCoder().encode(["string", "uint256"], ["setMaxDepositsPerAddress", 3n])
+      );
+      await mixer.connect(owner).queueAction(actionHash);
+      await time.increase(24 * 60 * 60 + 1);
       await expect(mixer.connect(owner).setMaxDepositsPerAddress(3n))
         .to.emit(mixer, "MaxDepositsPerAddressUpdated")
         .withArgs(3n);
@@ -76,8 +95,8 @@ describe("Mixer — per-address deposit limit", function () {
 
     it("owner can reset limit to 0 (unlimited)", async function () {
       const { mixer, owner } = await loadFixture(deployMixerFixture);
-      await mixer.connect(owner).setMaxDepositsPerAddress(3n);
-      await mixer.connect(owner).setMaxDepositsPerAddress(0n);
+      await timelockSetMaxDeposits(mixer, owner, 3n);
+      await timelockSetMaxDeposits(mixer, owner, 0n);
       expect(await mixer.maxDepositsPerAddress()).to.equal(0n);
     });
   });
@@ -85,7 +104,7 @@ describe("Mixer — per-address deposit limit", function () {
   describe("enforcement", function () {
     it("allows exactly maxDepositsPerAddress deposits", async function () {
       const { mixer, owner, alice } = await loadFixture(deployMixerFixture);
-      await mixer.connect(owner).setMaxDepositsPerAddress(3n);
+      await timelockSetMaxDeposits(mixer, owner, 3n);
       for (let i = 0; i < 3; i++) {
         await doDeposit(mixer, alice);
       }
@@ -94,7 +113,7 @@ describe("Mixer — per-address deposit limit", function () {
 
     it("reverts on the 4th deposit when limit is 3", async function () {
       const { mixer, owner, alice } = await loadFixture(deployMixerFixture);
-      await mixer.connect(owner).setMaxDepositsPerAddress(3n);
+      await timelockSetMaxDeposits(mixer, owner, 3n);
       for (let i = 0; i < 3; i++) {
         await doDeposit(mixer, alice);
       }
@@ -106,7 +125,7 @@ describe("Mixer — per-address deposit limit", function () {
 
     it("limit is per-address: different addresses are independent", async function () {
       const { mixer, owner, alice, bob } = await loadFixture(deployMixerFixture);
-      await mixer.connect(owner).setMaxDepositsPerAddress(2n);
+      await timelockSetMaxDeposits(mixer, owner, 2n);
       await doDeposit(mixer, alice);
       await doDeposit(mixer, alice);
       // alice is now at limit; bob should still be able to deposit
@@ -116,11 +135,11 @@ describe("Mixer — per-address deposit limit", function () {
 
     it("removing the limit (set to 0) allows further deposits after hitting the old limit", async function () {
       const { mixer, owner, alice } = await loadFixture(deployMixerFixture);
-      await mixer.connect(owner).setMaxDepositsPerAddress(2n);
+      await timelockSetMaxDeposits(mixer, owner, 2n);
       await doDeposit(mixer, alice);
       await doDeposit(mixer, alice);
       // hit limit, then remove it
-      await mixer.connect(owner).setMaxDepositsPerAddress(0n);
+      await timelockSetMaxDeposits(mixer, owner, 0n);
       await doDeposit(mixer, alice); // should succeed
       expect(await mixer.depositsPerAddress(alice.address)).to.equal(3n);
     });
@@ -129,14 +148,14 @@ describe("Mixer — per-address deposit limit", function () {
   describe("getRemainingDeposits", function () {
     it("returns correct remaining count after some deposits", async function () {
       const { mixer, owner, alice } = await loadFixture(deployMixerFixture);
-      await mixer.connect(owner).setMaxDepositsPerAddress(3n);
+      await timelockSetMaxDeposits(mixer, owner, 3n);
       await doDeposit(mixer, alice);
       expect(await mixer.getRemainingDeposits(alice.address)).to.equal(2n);
     });
 
     it("returns 0 when limit is fully consumed", async function () {
       const { mixer, owner, alice } = await loadFixture(deployMixerFixture);
-      await mixer.connect(owner).setMaxDepositsPerAddress(3n);
+      await timelockSetMaxDeposits(mixer, owner, 3n);
       for (let i = 0; i < 3; i++) {
         await doDeposit(mixer, alice);
       }
@@ -145,8 +164,8 @@ describe("Mixer — per-address deposit limit", function () {
 
     it("returns max uint256 when limit is 0 (unlimited)", async function () {
       const { mixer, owner, alice } = await loadFixture(deployMixerFixture);
-      await mixer.connect(owner).setMaxDepositsPerAddress(3n);
-      await mixer.connect(owner).setMaxDepositsPerAddress(0n);
+      await timelockSetMaxDeposits(mixer, owner, 3n);
+      await timelockSetMaxDeposits(mixer, owner, 0n);
       expect(await mixer.getRemainingDeposits(alice.address)).to.equal(
         ethers.MaxUint256
       );

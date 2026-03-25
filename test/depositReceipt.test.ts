@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
+import { loadFixture, time } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { deployHasher } from "./helpers/hasher";
 import type { Mixer, DepositReceipt, Groth16Verifier } from "../typechain-types";
 
@@ -10,6 +10,17 @@ const DENOMINATION = 100_000_000_000_000_000n; // 0.1 ETH in wei
 function randomCommitment(): bigint {
   const raw = BigInt("0x" + Buffer.from(ethers.randomBytes(31)).toString("hex"));
   return raw === 0n ? 1n : raw;
+}
+
+type Signer = Awaited<ReturnType<typeof ethers.getSigners>>[number];
+
+async function timelockSetDepositReceipt(mixer: Mixer, owner: Signer, receiptAddress: string): Promise<void> {
+  const actionHash = ethers.keccak256(
+    ethers.AbiCoder.defaultAbiCoder().encode(["string", "address"], ["setDepositReceipt", receiptAddress])
+  );
+  await mixer.connect(owner).queueAction(actionHash);
+  await time.increase(24 * 60 * 60 + 1); // 1 day + 1 second
+  await mixer.connect(owner).setDepositReceipt(receiptAddress);
 }
 
 async function deployMixerWithReceiptFixture() {
@@ -33,8 +44,8 @@ async function deployMixerWithReceiptFixture() {
     await mixer.getAddress()
   )) as unknown as DepositReceipt;
 
-  // Register receipt in Mixer
-  await mixer.connect(owner).setDepositReceipt(await receipt.getAddress());
+  // Register receipt in Mixer (requires timelock)
+  await timelockSetDepositReceipt(mixer, owner, await receipt.getAddress());
 
   return { mixer, receipt, owner, depositor, other };
 }
@@ -230,14 +241,18 @@ describe("DepositReceipt", function () {
       const { mixer, receipt, depositor } = await loadFixture(
         deployMixerWithReceiptFixture
       );
+      const addr = await receipt.getAddress();
+      const actionHash = ethers.keccak256(
+        ethers.AbiCoder.defaultAbiCoder().encode(["string", "address"], ["setDepositReceipt", addr])
+      );
       await expect(
-        mixer.connect(depositor).setDepositReceipt(await receipt.getAddress())
-      ).to.be.reverted;
+        mixer.connect(depositor).queueAction(actionHash)
+      ).to.be.revertedWithCustomError(mixer, "OwnableUnauthorizedAccount");
     });
 
     it("owner can unset depositReceipt by passing address(0)", async function () {
       const { mixer, owner } = await loadFixture(deployMixerWithReceiptFixture);
-      await mixer.connect(owner).setDepositReceipt(ethers.ZeroAddress);
+      await timelockSetDepositReceipt(mixer, owner, ethers.ZeroAddress);
       expect(await mixer.depositReceipt()).to.equal(ethers.ZeroAddress);
     });
   });

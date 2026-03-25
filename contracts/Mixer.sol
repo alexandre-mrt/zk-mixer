@@ -85,6 +85,26 @@ contract Mixer is MerkleTree, ReentrancyGuard, Pausable, Ownable {
     /// @notice Total number of withdrawals completed.
     uint256 public withdrawalCount;
 
+    /// @notice Timelock delay for sensitive parameter changes.
+    uint256 public constant TIMELOCK_DELAY = 1 days;
+
+    struct PendingAction {
+        bytes32 actionHash;
+        uint256 executeAfter;
+    }
+
+    /// @notice The currently queued action, if any.
+    PendingAction public pendingAction;
+
+    /// @notice Emitted when a parameter change is queued.
+    event ActionQueued(bytes32 indexed actionHash, uint256 executeAfter);
+
+    /// @notice Emitted when a queued action is executed.
+    event ActionExecuted(bytes32 indexed actionHash);
+
+    /// @notice Emitted when a queued action is cancelled.
+    event ActionCancelled(bytes32 indexed actionHash);
+
     /// @notice Emitted when the per-address deposit limit is updated.
     /// @param newMax New maximum deposits per address (0 = unlimited).
     event MaxDepositsPerAddressUpdated(uint256 newMax);
@@ -123,6 +143,34 @@ contract Mixer is MerkleTree, ReentrancyGuard, Pausable, Ownable {
         verifier = IVerifier(_verifier);
         denomination = _denomination;
         deployedChainId = block.chainid;
+    }
+
+    /// @notice Queue a parameter change that takes effect after TIMELOCK_DELAY.
+    /// @dev Only one action can be pending at a time. Replaces any existing pending action.
+    /// @param _actionHash keccak256 of the action identifier and its arguments.
+    function queueAction(bytes32 _actionHash) external onlyOwner {
+        pendingAction = PendingAction({
+            actionHash: _actionHash,
+            executeAfter: block.timestamp + TIMELOCK_DELAY
+        });
+        emit ActionQueued(_actionHash, block.timestamp + TIMELOCK_DELAY);
+    }
+
+    /// @notice Cancel the pending action.
+    function cancelAction() external onlyOwner {
+        require(pendingAction.actionHash != bytes32(0), "Mixer: no pending action");
+        emit ActionCancelled(pendingAction.actionHash);
+        delete pendingAction;
+    }
+
+    /// @notice Checks that the pending action matches _actionHash and the delay has elapsed.
+    ///         Clears the pending action after execution.
+    modifier timelockReady(bytes32 _actionHash) {
+        require(pendingAction.actionHash == _actionHash, "Mixer: action not queued");
+        require(block.timestamp >= pendingAction.executeAfter, "Mixer: timelock not expired");
+        _;
+        delete pendingAction;
+        emit ActionExecuted(_actionHash);
     }
 
     /// @notice Reverts if the current chain differs from the deployment chain.
@@ -283,9 +331,14 @@ contract Mixer is MerkleTree, ReentrancyGuard, Pausable, Ownable {
     }
 
     /// @notice Sets the maximum number of deposits allowed per address.
-    /// @dev Set to 0 to remove the limit (default). Only callable by the owner.
+    /// @dev Must be preceded by queueAction(keccak256(abi.encode("setMaxDepositsPerAddress", _max)))
+    ///      and waited TIMELOCK_DELAY. Set to 0 to remove the limit (default).
     /// @param _max Maximum deposits per address (0 = unlimited).
-    function setMaxDepositsPerAddress(uint256 _max) external onlyOwner {
+    function setMaxDepositsPerAddress(uint256 _max)
+        external
+        onlyOwner
+        timelockReady(keccak256(abi.encode("setMaxDepositsPerAddress", _max)))
+    {
         maxDepositsPerAddress = _max;
         emit MaxDepositsPerAddressUpdated(_max);
     }
@@ -313,9 +366,14 @@ contract Mixer is MerkleTree, ReentrancyGuard, Pausable, Ownable {
     }
 
     /// @notice Set (or unset) the optional ERC721 deposit receipt contract.
-    /// @dev Pass address(0) to disable receipt minting. Only callable by the owner.
+    /// @dev Must be preceded by queueAction(keccak256(abi.encode("setDepositReceipt", _receipt)))
+    ///      and waited TIMELOCK_DELAY. Pass address(0) to disable receipt minting.
     /// @param _receipt Address of a deployed DepositReceipt contract, or address(0) to disable.
-    function setDepositReceipt(address _receipt) external onlyOwner {
+    function setDepositReceipt(address _receipt)
+        external
+        onlyOwner
+        timelockReady(keccak256(abi.encode("setDepositReceipt", _receipt)))
+    {
         depositReceipt = DepositReceipt(_receipt);
     }
 }
