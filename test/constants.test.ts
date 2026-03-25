@@ -35,4 +35,21 @@ describe("MixerConstants", function () {
     const { mixer } = await loadFixture(deployMixerFixture);
     expect(await mixer.ROOT_HISTORY_SIZE()).to.equal(MIXER_ROOT_HISTORY_SIZE);
   });
+
+  it("VERSION constant returns '1.0.0'", async function () {
+    const { mixer } = await loadFixture(deployMixerFixture);
+    expect(await mixer.VERSION()).to.equal("1.0.0");
+  });
+
+  it("getVersion() returns '1.0.0'", async function () {
+    const { mixer } = await loadFixture(deployMixerFixture);
+    expect(await mixer.getVersion()).to.equal("1.0.0");
+  });
+
+  it("VERSION is constant — same value on repeated calls", async function () {
+    const { mixer } = await loadFixture(deployMixerFixture);
+    const first = await mixer.VERSION();
+    const second = await mixer.VERSION();
+    expect(first).to.equal(second);
+  });
 });

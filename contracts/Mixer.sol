@@ -95,6 +95,9 @@ contract Mixer is MerkleTree, ReentrancyGuard, Pausable, Ownable {
     /// @notice Total number of withdrawals completed.
     uint256 public withdrawalCount;
 
+    /// @notice Protocol version string.
+    string public constant VERSION = "1.0.0";
+
     /// @notice Timelock delay for sensitive parameter changes.
     uint256 public constant TIMELOCK_DELAY = 1 days;
 
@@ -297,6 +300,11 @@ contract Mixer is MerkleTree, ReentrancyGuard, Pausable, Ownable {
             result[i - _from] = indexToCommitment[i];
         }
         return result;
+    }
+
+    /// @notice Returns the protocol version string.
+    function getVersion() external pure returns (string memory) {
+        return VERSION;
     }
 
     /// @notice Check if a nullifier hash has been spent

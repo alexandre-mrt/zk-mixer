@@ -91,6 +91,13 @@ export const MIXER_ABI = [
   },
   {
     type: "function",
+    name: "getVersion",
+    inputs: [],
+    outputs: [{ name: "", type: "string" }],
+    stateMutability: "pure",
+  },
+  {
+    type: "function",
     name: "getPoolHealth",
     inputs: [],
     outputs: [
