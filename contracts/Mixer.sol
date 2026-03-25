@@ -69,6 +69,13 @@ contract Mixer is MerkleTree, ReentrancyGuard, Pausable, Ownable {
     /// The receipt is purely informational — the ZK proof is what proves ownership for withdrawal.
     DepositReceipt public depositReceipt;
 
+    /// @notice Maximum number of deposits allowed per address (0 = unlimited).
+    /// @dev Prevents a single address from dominating the anonymity set.
+    uint256 public maxDepositsPerAddress;
+
+    /// @notice Tracks the number of deposits made by each address.
+    mapping(address => uint256) public depositsPerAddress;
+
     /// @notice Cumulative amount deposited across all deposits (in wei).
     uint256 public totalDeposited;
 
@@ -77,6 +84,10 @@ contract Mixer is MerkleTree, ReentrancyGuard, Pausable, Ownable {
 
     /// @notice Total number of withdrawals completed.
     uint256 public withdrawalCount;
+
+    /// @notice Emitted when the per-address deposit limit is updated.
+    /// @param newMax New maximum deposits per address (0 = unlimited).
+    event MaxDepositsPerAddressUpdated(uint256 newMax);
 
     /// @notice Emitted when a commitment is successfully inserted into the tree.
     /// @param commitment  Poseidon(secret, nullifier) provided by the depositor.
@@ -129,10 +140,14 @@ contract Mixer is MerkleTree, ReentrancyGuard, Pausable, Ownable {
         require(!commitments[_commitment], "Mixer: duplicate commitment");
         require(_commitment != 0, "Mixer: commitment is zero");
         require(_commitment < FIELD_SIZE, "Mixer: commitment >= field size");
+        if (maxDepositsPerAddress > 0) {
+            require(depositsPerAddress[msg.sender] < maxDepositsPerAddress, "Mixer: deposit limit reached");
+        }
 
         uint32 insertedIndex = _insert(_commitment);
         commitments[_commitment] = true;
         commitmentIndex[_commitment] = insertedIndex;
+        depositsPerAddress[msg.sender]++;
         totalDeposited += denomination;
 
         emit Deposit(_commitment, insertedIndex, block.timestamp);
@@ -265,6 +280,24 @@ contract Mixer is MerkleTree, ReentrancyGuard, Pausable, Ownable {
         uint256 _poolBalance
     ) {
         return (totalDeposited, totalWithdrawn, nextIndex, withdrawalCount, address(this).balance);
+    }
+
+    /// @notice Sets the maximum number of deposits allowed per address.
+    /// @dev Set to 0 to remove the limit (default). Only callable by the owner.
+    /// @param _max Maximum deposits per address (0 = unlimited).
+    function setMaxDepositsPerAddress(uint256 _max) external onlyOwner {
+        maxDepositsPerAddress = _max;
+        emit MaxDepositsPerAddressUpdated(_max);
+    }
+
+    /// @notice Returns how many more deposits an address can make.
+    /// @dev Returns type(uint256).max when no limit is configured.
+    /// @param _addr The address to query.
+    /// @return Remaining deposits allowed (type(uint256).max if unlimited).
+    function getRemainingDeposits(address _addr) external view returns (uint256) {
+        if (maxDepositsPerAddress == 0) return type(uint256).max;
+        uint256 used = depositsPerAddress[_addr];
+        return used >= maxDepositsPerAddress ? 0 : maxDepositsPerAddress - used;
     }
 
     /// @notice Pause all deposits and withdrawals.
