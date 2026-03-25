@@ -5,6 +5,7 @@
   "scripts": {
     "compile": "hardhat compile",
     "test": "hardhat test",
+    "test:gas": "REPORT_GAS=true hardhat test",
     "test:circuits": "bun test test/circuit.test.ts",
     "node": "hardhat node",
     "deploy:local": "hardhat run scripts/deploy.ts --network localhost",
