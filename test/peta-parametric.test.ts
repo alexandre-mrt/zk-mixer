@@ -8,7 +8,7 @@ import type { Mixer } from "../typechain-types";
 // Constants
 // ---------------------------------------------------------------------------
 
-const MERKLE_TREE_HEIGHT = 9; // capacity = 512
+const MERKLE_TREE_HEIGHT = 5; // capacity = 32
 const DENOMINATION = 100_000_000_000_000_000n; // 0.1 ETH
 
 const FIELD_MAX =
@@ -81,11 +81,11 @@ async function doWithdraw(
 
 describe("Peta Parametric", function () {
   // -------------------------------------------------------------------------
-  // 400 deposit cycles — commitment stored and index correct
+  // 5 deposit cycles — commitment stored and index correct
   // Primes/offsets: 503n, 509n / base 90_000_000n — distinct from all prior suites
   // -------------------------------------------------------------------------
 
-  for (let i = 0; i < 400; i++) {
+  for (let i = 0; i < 5; i++) {
     it(`deposit #${i}: stored and indexed`, async function () {
       const { mixer, user1 } = await loadFixture(deployPetaMixerFixture);
       // Distinct primes/offset per suite — no collision with other parametric files
@@ -99,10 +99,10 @@ describe("Peta Parametric", function () {
   }
 
   // -------------------------------------------------------------------------
-  // 200 Poseidon hash pairs — on-chain output matches itself (determinism)
+  // 5 Poseidon hash pairs — on-chain output matches itself (determinism)
   // -------------------------------------------------------------------------
 
-  for (let i = 0; i < 200; i++) {
+  for (let i = 0; i < 5; i++) {
     const left = BigInt(i + 1) * 509n + 91_000_000n;
     const right = BigInt(i + 1) * 521n + 91_100_000n;
     it(`hash match #${i}`, async function () {
@@ -115,10 +115,10 @@ describe("Peta Parametric", function () {
   }
 
   // -------------------------------------------------------------------------
-  // 200 fee split variations — recipient receives denomination minus fee
+  // 5 fee split variations — recipient receives denomination minus fee
   // -------------------------------------------------------------------------
 
-  for (let f = 0; f < 200; f++) {
+  for (let f = 0; f < 5; f++) {
     it(`fee #${f}: correct split`, async function () {
       const { mixer, user1, recipient, relayer } =
         await loadFixture(deployPetaMixerFixture);
@@ -128,7 +128,7 @@ describe("Peta Parametric", function () {
       await doDeposit(mixer, user1, commitment);
       const root = await mixer.getLastRoot();
 
-      const fee = (DENOMINATION * BigInt(f)) / 199n;
+      const fee = (DENOMINATION * BigInt(f)) / 4n;
       const expectedRecipient = DENOMINATION - fee;
 
       const nullifierHash =

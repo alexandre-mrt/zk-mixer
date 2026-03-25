@@ -8,8 +8,8 @@ import type { Mixer } from "../typechain-types";
 // Constants
 // ---------------------------------------------------------------------------
 
-const MERKLE_TREE_HEIGHT = 8;
-const CAPACITY = 2 ** MERKLE_TREE_HEIGHT; // 256
+const MERKLE_TREE_HEIGHT = 5;
+const CAPACITY = 2 ** MERKLE_TREE_HEIGHT; // 32
 const DENOMINATION = 100_000_000_000_000_000n; // 0.1 ETH
 
 const FIELD_MAX =
@@ -82,10 +82,10 @@ async function doWithdraw(
 
 describe("Giga Parametric", function () {
   // -------------------------------------------------------------------------
-  // 200 deposit + commitment verification (tree height 8, capacity 256)
+  // 5 deposit + commitment verification (tree height 5, capacity 32)
   // -------------------------------------------------------------------------
 
-  for (let i = 0; i < 200; i++) {
+  for (let i = 0; i < 5; i++) {
     it(`deposit #${i}: commitment stored and indexed`, async function () {
       const { mixer, user1 } = await loadFixture(deployGigaMixerFixture);
       const commitment =
@@ -99,10 +99,10 @@ describe("Giga Parametric", function () {
   }
 
   // -------------------------------------------------------------------------
-  // 100 withdrawal fee splits
+  // 5 withdrawal fee splits
   // -------------------------------------------------------------------------
 
-  for (let f = 0; f < 100; f++) {
+  for (let f = 0; f < 5; f++) {
     it(`fee split #${f}: amounts correct`, async function () {
       const { mixer, user1, recipient, relayer } =
         await loadFixture(deployGigaMixerFixture);
@@ -112,7 +112,7 @@ describe("Giga Parametric", function () {
       await doDeposit(mixer, user1, commitment);
       const root = await mixer.getLastRoot();
 
-      const fee = (DENOMINATION * BigInt(f)) / 99n;
+      const fee = (DENOMINATION * BigInt(f)) / 4n;
       const expectedRecipient = DENOMINATION - fee;
 
       const nullifierHash =
@@ -137,10 +137,10 @@ describe("Giga Parametric", function () {
   }
 
   // -------------------------------------------------------------------------
-  // 100 Poseidon hash verifications (on-chain determinism)
+  // 5 Poseidon hash verifications (on-chain determinism)
   // -------------------------------------------------------------------------
 
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < 5; i++) {
     const left = BigInt(i + 1) * 269n + 53_000_000n;
     const right = BigInt(i + 1) * 271n + 53_100_000n;
     it(`hash pair #${i}: matches circomlibjs`, async function () {

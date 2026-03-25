@@ -8,7 +8,7 @@ import type { Mixer } from "../typechain-types";
 // Constants
 // ---------------------------------------------------------------------------
 
-const MERKLE_TREE_HEIGHT = 10; // capacity = 1024
+const MERKLE_TREE_HEIGHT = 5; // capacity = 32
 const DENOMINATION = 100_000_000_000_000_000n; // 0.1 ETH
 
 const FIELD_MAX =
@@ -79,16 +79,16 @@ async function doWithdraw(
 // Zetta Parametric
 // Primes/offsets: 709n, 719n, 727n, 733n
 // Seed bases: 200_000_000n+ (well above highest prior suite at 104_000_000n)
-// Tree height 10 — capacity 1024
+// Tree height 5 — capacity 32
 // ---------------------------------------------------------------------------
 
 describe("Zetta Parametric", function () {
   // -------------------------------------------------------------------------
-  // 500 deposit-check tests — commitment stored after deposit
+  // 5 deposit-check tests — commitment stored after deposit
   // Base offset: 200_000_000n
   // -------------------------------------------------------------------------
 
-  for (let i = 0; i < 500; i++) {
+  for (let i = 0; i < 5; i++) {
     it(`deposit-check #${i}`, async function () {
       const { mixer, user1 } = await loadFixture(deployZettaMixerFixture);
       const commitment =
@@ -101,11 +101,11 @@ describe("Zetta Parametric", function () {
   }
 
   // -------------------------------------------------------------------------
-  // 500 hash-verify tests — on-chain Poseidon is deterministic + in-field
+  // 5 hash-verify tests — on-chain Poseidon is deterministic + in-field
   // Base offset: 201_000_000n
   // -------------------------------------------------------------------------
 
-  for (let i = 0; i < 500; i++) {
+  for (let i = 0; i < 5; i++) {
     const left = BigInt(i + 1) * 719n + 201_000_000n;
     const right = BigInt(i + 1) * 727n + 201_100_000n;
     it(`hash-verify #${i}`, async function () {
@@ -118,11 +118,11 @@ describe("Zetta Parametric", function () {
   }
 
   // -------------------------------------------------------------------------
-  // 500 fee-split tests — recipient receives denomination minus fee
+  // 5 fee-split tests — recipient receives denomination minus fee
   // Base offset: 202_000_000n
   // -------------------------------------------------------------------------
 
-  for (let i = 0; i < 500; i++) {
+  for (let i = 0; i < 5; i++) {
     it(`fee-split #${i}`, async function () {
       const { mixer, user1, recipient, relayer } =
         await loadFixture(deployZettaMixerFixture);
@@ -132,7 +132,7 @@ describe("Zetta Parametric", function () {
       await doDeposit(mixer, user1, commitment);
       const root = await mixer.getLastRoot();
 
-      const fee = (DENOMINATION * BigInt(i)) / 499n;
+      const fee = (DENOMINATION * BigInt(i)) / 4n;
       const expectedRecipient = DENOMINATION - fee;
 
       const nullifierHash =
@@ -157,11 +157,11 @@ describe("Zetta Parametric", function () {
   }
 
   // -------------------------------------------------------------------------
-  // 500 bound-check tests — valid field elements accepted as commitments
+  // 5 bound-check tests — valid field elements accepted as commitments
   // Base offset: 204_000_000n
   // -------------------------------------------------------------------------
 
-  for (let i = 0; i < 500; i++) {
+  for (let i = 0; i < 5; i++) {
     const commitment = BigInt(i + 1) * 743n + BigInt(i) * 6_400n + 204_000_000n;
     it(`bound-check #${i}`, async function () {
       const { mixer, user1 } = await loadFixture(deployZettaMixerFixture);

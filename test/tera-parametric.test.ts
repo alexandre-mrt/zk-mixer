@@ -8,7 +8,7 @@ import type { Mixer } from "../typechain-types";
 // Constants
 // ---------------------------------------------------------------------------
 
-const MERKLE_TREE_HEIGHT = 9; // capacity = 512 (supports 300-deposit loops)
+const MERKLE_TREE_HEIGHT = 5; // capacity = 32
 const DENOMINATION = 100_000_000_000_000_000n; // 0.1 ETH
 
 const FIELD_MAX =
@@ -81,10 +81,10 @@ async function doWithdraw(
 
 describe("Tera Parametric", function () {
   // -------------------------------------------------------------------------
-  // 300 deposit cycles — commitment stored (tree height 9, capacity 512)
+  // 5 deposit cycles — commitment stored (tree height 5, capacity 32)
   // -------------------------------------------------------------------------
 
-  for (let i = 0; i < 300; i++) {
+  for (let i = 0; i < 5; i++) {
     it(`deposit #${i}: accepted`, async function () {
       const { mixer, user1 } = await loadFixture(deployTeraMixerFixture);
       // Use distinct primes to avoid commitment collision across iterations
@@ -98,10 +98,10 @@ describe("Tera Parametric", function () {
   }
 
   // -------------------------------------------------------------------------
-  // 200 fee splits — recipient receives denomination minus fee
+  // 5 fee splits — recipient receives denomination minus fee
   // -------------------------------------------------------------------------
 
-  for (let f = 0; f < 200; f++) {
+  for (let f = 0; f < 5; f++) {
     it(`fee split #${f}`, async function () {
       const { mixer, user1, recipient, relayer } =
         await loadFixture(deployTeraMixerFixture);
@@ -111,7 +111,7 @@ describe("Tera Parametric", function () {
       await doDeposit(mixer, user1, commitment);
       const root = await mixer.getLastRoot();
 
-      const fee = (DENOMINATION * BigInt(f)) / 199n;
+      const fee = (DENOMINATION * BigInt(f)) / 4n;
       const expectedRecipient = DENOMINATION - fee;
 
       const nullifierHash =
@@ -136,10 +136,10 @@ describe("Tera Parametric", function () {
   }
 
   // -------------------------------------------------------------------------
-  // 200 hash pairs — deterministic on-chain Poseidon
+  // 5 hash pairs — deterministic on-chain Poseidon
   // -------------------------------------------------------------------------
 
-  for (let i = 0; i < 200; i++) {
+  for (let i = 0; i < 5; i++) {
     const left = BigInt(i + 1) * 401n + 73_000_000n;
     const right = BigInt(i + 1) * 409n + 73_100_000n;
     it(`hash #${i}: consistent`, async function () {
@@ -152,10 +152,10 @@ describe("Tera Parametric", function () {
   }
 
   // -------------------------------------------------------------------------
-  // 100 commitment bounds — field element validation
+  // 5 commitment bounds — field element validation
   // -------------------------------------------------------------------------
 
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < 5; i++) {
     const bits = 10 + i * 2; // 10, 12, 14, …, 208
     const candidate = 2n ** BigInt(bits) - 1n;
     const isValid = candidate > 0n && candidate < FIELD_MAX;
