@@ -14,6 +14,7 @@ const MINIMAL_MIXER_ABI = [
   "function denomination() view returns (uint256)",
   "function nullifierHashes(uint256) view returns (bool)",
   "event Deposit(uint256 indexed commitment, uint32 leafIndex, uint256 timestamp)",
+  "event Withdrawal(address to, uint256 nullifierHash, address indexed relayer, uint256 fee)",
 ];
 
 /**
