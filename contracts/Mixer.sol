@@ -226,6 +226,31 @@ contract Mixer is MerkleTree, ReentrancyGuard, Pausable, Ownable {
         return nextIndex;
     }
 
+    /// @notice Returns the size of the current anonymity set (deposits - withdrawals)
+    function getAnonymitySetSize() external view returns (uint256) {
+        return uint256(nextIndex) - withdrawalCount;
+    }
+
+    /// @notice Returns pool health metrics in a single call.
+    /// @return anonymitySetSize Number of unspent deposits currently in the pool.
+    /// @return treeUtilization  Percentage of Merkle tree capacity used (0–100).
+    /// @return poolBalance      Current ETH balance of the contract (wei).
+    /// @return isPaused         Whether the contract is currently paused.
+    function getPoolHealth() external view returns (
+        uint256 anonymitySetSize,
+        uint256 treeUtilization,
+        uint256 poolBalance,
+        bool isPaused
+    ) {
+        uint256 capacity = uint256(2) ** levels;
+        return (
+            uint256(nextIndex) - withdrawalCount,
+            capacity > 0 ? (uint256(nextIndex) * 100) / capacity : 0,
+            address(this).balance,
+            paused()
+        );
+    }
+
     /// @notice Return cumulative pool statistics in a single call.
     /// @return _totalDeposited  Sum of all deposited amounts (wei).
     /// @return _totalWithdrawn  Sum of all withdrawn amounts (wei).

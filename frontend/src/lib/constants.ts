@@ -82,6 +82,25 @@ export const MIXER_ABI = [
     outputs: [{ type: "bool" }],
     stateMutability: "view",
   },
+  {
+    type: "function",
+    name: "getAnonymitySetSize",
+    inputs: [],
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "getPoolHealth",
+    inputs: [],
+    outputs: [
+      { name: "anonymitySetSize", type: "uint256" },
+      { name: "treeUtilization", type: "uint256" },
+      { name: "poolBalance", type: "uint256" },
+      { name: "isPaused", type: "bool" },
+    ],
+    stateMutability: "view",
+  },
 ] as const;
 
 // Placeholder — update after deployment
