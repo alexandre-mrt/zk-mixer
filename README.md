@@ -9,7 +9,7 @@ circuits/       Circom ZK circuits (Poseidon hash, Merkle tree, withdraw)
 contracts/      Solidity (Mixer, MerkleTree, DepositReceipt ERC721)
 cli/            TypeScript CLI (deposit, withdraw, status)
 frontend/       React + wagmi + Tailwind + shadcn/ui
-test/           126 Hardhat tests
+test/           981 Hardhat tests
 scripts/        Deploy, verify, compile circuits
 ```
 
@@ -67,13 +67,26 @@ cd frontend && bun install && bun dev
 - Relayer bound as 5th public signal (front-running protection)
 - Soulbound ERC721 deposit receipts
 - Chain ID replay protection
-- Placeholder verifier guarded to Hardhat-only (chainId == 31337)
+
+## Status & Limitations
+
+This is a working reference implementation, not an audited production system. Read this before deploying anything:
+
+- **The on-chain Groth16 verifier is a development placeholder** (`contracts/Verifier.sol`). It accepts any proof and is hard-guarded to the Hardhat network (`chainid == 31337`), so it reverts on any real network. To get real zero-knowledge verification you must compile the circuits and generate the real verifier:
+  ```bash
+  bash scripts/compile-circuit.sh     # requires circom 2.x installed
+  bash scripts/generate-verifier.sh   # snarkjs -> real Groth16Verifier
+  ```
+  Until you do this, the ZK proving path is not enforced end-to-end. The tests exercise the contracts (Merkle tree, nullifiers, receipts, access control) with real Poseidon hashing but dummy proofs against the placeholder verifier.
+- Not audited. Do not deploy to mainnet with real funds.
 
 ## Tests
 
+The Hardhat suite covers the Solidity contracts (Mixer, MerkleTree, DepositReceipt, MixerLens, timelock governance, access control) using a real circomlibjs Poseidon hasher deployed on-chain.
+
 ```bash
-npx hardhat test             # 126 tests
-npx hardhat test --grep E2E  # E2E with real Poseidon hashing
+npx hardhat test             # 981 tests, all passing
+npx hardhat test --grep E2E  # end-to-end scenarios with real Poseidon hashing
 ```
 
 ## Tech Stack
